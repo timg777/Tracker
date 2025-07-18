@@ -13,7 +13,7 @@ final class TrackerManager {
         (weekday: .sunday, isChoosen: false)
     ]
     
-    var categories: [TrackerCategory] = []
+    var categories: [TrackerCategory] = mockCategories
     var choosenCategory: String?
     var categoriesDidChanged: (() -> Void)?
 }

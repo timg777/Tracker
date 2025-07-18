@@ -351,24 +351,35 @@ extension TrackersViewController: UICollectionViewDataSource {
             return UICollectionViewCell()
         }
         
-        cell.tracker = tracker
-        cell.isDayChecked =
+        let currentDateString = currentDate.convertToString(formatString: "dd.MM.yyyy")
+        let isDayChecked =
         completedTrackers
             .filter {
                 let idIsEqual = $0.trackerId == tracker.id
-                let dateIsEqual = $0.dateString == currentDate.convertToString(formatString: "dd.MM.yyyy")
+                let dateIsEqual = $0.dateString == currentDateString
                 return idIsEqual && dateIsEqual
             }
             .count == 1
+        
+        cell.tracker = tracker
+        cell.isDayChecked = isDayChecked
+        
         cell.daysCheckedCount = completedTrackers.filter { $0.trackerId == tracker.id }.count
         cell.plusButtonTapped = { [weak self] in
-            guard let self else { return }
-            completedTrackers.append(
-                .init(
-                    trackerId: tracker.id,
-                    dateString: currentDate.convertToString(formatString: "dd.MM.yyyy")
+            guard
+                let self,
+                Date.now >= currentDate
+            else { return }
+            if isDayChecked {
+                completedTrackers.removeAll(where: { $0.trackerId == tracker.id && $0.dateString == currentDateString })
+            } else {
+                completedTrackers.append(
+                    .init(
+                        trackerId: tracker.id,
+                        dateString: currentDateString
+                    )
                 )
-            )
+            }
             collectionView.reloadItems(at: [indexPath])
         }
         return cell

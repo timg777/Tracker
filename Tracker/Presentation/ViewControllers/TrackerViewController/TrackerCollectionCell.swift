@@ -167,7 +167,6 @@ private extension TrackerCollectionCell {
                 image,
                 for: .normal
             )
-            plusButton.isEnabled = !(isDayChecked ?? false)
             plusButton.layer.opacity = (isDayChecked ?? false) ? 0.5 : 1
         }
     }
