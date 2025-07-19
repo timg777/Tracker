@@ -251,32 +251,23 @@ extension TrackersViewController: UICollectionViewDelegateFlowLayout {
         layout collectionViewLayout: UICollectionViewLayout,
         referenceSizeForHeaderInSection section: Int
     ) -> CGSize {
-        
-        let indexPath = IndexPath(
-            row: 0,
-            section: section
-        )
-        
-        guard
-            let headerView = self.collectionView(
-                collectionView,
-                viewForSupplementaryElementOfKind: UICollectionView.elementKindSectionHeader,
-                at: indexPath
-            ) as? TrackerSupplementaryView
-        else {
+        guard let title = categoriesToDisplay[safe: section]?.title else {
             return .zero
         }
 
-        return headerView.systemLayoutSizeFitting(
-            .init(
-                width: collectionView.frame.width,
-                height: (headerView.title?.count ?? 0) > 29 ? 50 : 30
-            ),
-            withHorizontalFittingPriority: .required,
-            verticalFittingPriority: .fittingSizeLevel
+        let width = collectionView.bounds.width - 32
+        let font = UIFont.ypMedium13
+        let boundingRect = NSString(string: title).boundingRect(
+            with: CGSize(width: width, height: .greatestFiniteMagnitude),
+            options: [.usesLineFragmentOrigin],
+            attributes: [.font: font],
+            context: nil
         )
-        
+
+        let height = ceil(boundingRect.height) + (title.count > 29 ? 32 : 16)
+        return CGSize(width: collectionView.bounds.width, height: max(height, 30))
     }
+
     
     func collectionView(
         _ collectionView: UICollectionView,
