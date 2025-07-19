@@ -54,7 +54,7 @@ private extension CategoryCreationViewController {
         } else {
             trackerManager.categories.append(.init(title: text, trackers: []))
         }
-        trackerManager.categoriesDidChanged?()
+
         navigationController?.popViewController(animated: true)
     }
 }

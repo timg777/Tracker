@@ -1,3 +1,5 @@
+import Foundation
+
 final class TrackerManager {
     static let shared = TrackerManager()
     private init() {}
@@ -15,7 +17,16 @@ final class TrackerManager {
     
     var categories: [TrackerCategory] = mockCategories
     var choosenCategory: String?
-    var categoriesDidChanged: (() -> Void)?
+    
+    func selectedOptions(for name: TrackerCreationOptionScreenItem.Name) -> String? {
+        switch name {
+        case .category:
+            return choosenCategory
+        case .schedule:
+            let schedule = convertScheduleToString()
+            return schedule.isEmpty ? nil : schedule
+        }
+    }
 }
 
 // MARK: - Extensions + Internal TrackerCreationManager Helpers
@@ -38,11 +49,23 @@ extension TrackerManager {
         categoryTitle: String,
         tracker: Tracker
     ) {
-        guard let category = categories.first(where: { $0.title == categoryTitle }) else { return }
-        let newCategory = TrackerCategory(title: categoryTitle, trackers: category.trackers + [tracker])
-        categories.removeAll(where: { $0.title == categoryTitle })
-        categories.append(newCategory)
-        categories.sort { $0.title < $1.title }
-        categoriesDidChanged?()
+        // MARK: - Мы допускаем одинаковые названия привычек, так как другие атрибуты включая индентификатор будут отличаться
+        if let index = categories.firstIndex(where: {
+            $0.title == categoryTitle
+        }) {
+            var trackers = categories[index].trackers
+            trackers.append(tracker)
+            let category = TrackerCategory(title: categoryTitle, trackers: trackers)
+            categories[index] = category
+        } else {
+            let title = categoryTitle
+            let newCategory = TrackerCategory(title: title, trackers: [tracker])
+            categories.append(newCategory)
+        }
+        
+        NotificationCenter.default.post(
+            name: .categoriesDidChangedNotification,
+            object: nil
+        )
     }
 }

@@ -7,6 +7,25 @@ enum WeekdayOption: Int8, CaseIterable {
     case saturday = 5
     case sunday = 6
     
+    func isEqual(to weekday: Int) -> Bool {
+        switch self {
+        case .monday:
+            weekday == 2
+        case .tuesday:
+            weekday == 3
+        case .wednesday:
+            weekday == 4
+        case .thursday:
+            weekday == 5
+        case .friday:
+            weekday == 6
+        case .saturday:
+            weekday == 7
+        case .sunday:
+            weekday == 1
+        }
+    }
+    
     var fullName: String {
         switch self {
         case .monday:

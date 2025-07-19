@@ -68,6 +68,7 @@ final class DisclosureOptionTableCell: UITableViewCell {
             style: style,
             reuseIdentifier: reuseIdentifier
         )
+        
         setUpViews()
     }
     
@@ -87,6 +88,12 @@ private extension DisclosureOptionTableCell {
         titleLabelConstraintsActivate()
         selectedOptionsLabelConstraintsActivate()
         separatorConstraintsActivate()
+        
+        if selectedOptions?.isEmpty ?? true {
+            titleLabelCenterYConstraint?.constant = bounds.midY - titleLabel.frame.height / 2
+        } else {
+            titleLabelCenterYConstraint?.constant = contentView.bounds.height / 3 - titleLabel.frame.height / 2
+        }
     }
 }
 

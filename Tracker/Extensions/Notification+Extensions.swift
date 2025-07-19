@@ -4,4 +4,5 @@ import Foundation
 extension Notification.Name {
     static let scheduleDidChangedNotification: Notification.Name = .init(rawValue: "scheduleDidChangedNotification")
     static let categoryDidChangedNotification: Notification.Name = .init(rawValue: "categoryDidChangedNotification")
+    static let categoriesDidChangedNotification: Notification.Name = .init(rawValue: "categoriesDidChangedNotification")
 }

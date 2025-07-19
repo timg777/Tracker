@@ -122,13 +122,12 @@ extension TrackerCreationOptionsViewController: UITextFieldDelegate {
 private extension TrackerCreationOptionsViewController {
     @objc func didTapConfirmButton() {
         guard
-            let title = textField.text,
-            let categoryTitle = optionsManager.choosenCategory
+            let title = textField.text
         else { return }
         let schedule = optionsManager.weekdays.filter { $0.isChoosen }.map( \.weekday )
         
         optionsManager.createTracker(
-            categoryTitle: categoryTitle,
+            categoryTitle: optionsManager.choosenCategory ?? "По умолчанию",
             tracker: .init(
                 id: .init(),
                 title: title,
@@ -236,14 +235,21 @@ extension TrackerCreationOptionsViewController: UITableViewDataSource {
             let cell = tableView.dequeueReusableCell(
                 withIdentifier: reuseIdentifier,
                 for: indexPath
-            ) as? DisclosureOptionTableCell
+            ) as? DisclosureOptionTableCell,
+            let screenItem = screenItems[safe: indexPath.row]
         else {
             return UITableViewCell()
         }
         
-        cell.screenItem = screenItems[safe: indexPath.row]
+        cell.screenItem = screenItem
         cell.isLastItem = indexPath.row == screenItems.count - 1
         cell.accessoryType = .disclosureIndicator
+
+        if
+            let selectedOptions = optionsManager.selectedOptions(for: screenItem.name)
+        {
+            cell.selectedOptions = selectedOptions
+        }
         
         return cell
     }
@@ -496,10 +502,9 @@ private extension TrackerCreationOptionsViewController {
     func checkForAllOptionFieldsAreCompleted(newTextValue text: String = "DEFAULT") {
         let text = text == "DEFAULT" ? textField.text ?? "" : text
         let hasAtLeastOneDaySelected = optionsManager.weekdays.contains(where: { $0.isChoosen })
-        let categoryIsSelected = optionsManager.choosenCategory != nil
         let isSearchFieldEmpty = text.isEmpty
         
-        let isButtonEnable = (hasAtLeastOneDaySelected || (isIrregularEvent ?? false)) && !isSearchFieldEmpty && categoryIsSelected
+        let isButtonEnable = (hasAtLeastOneDaySelected || (isIrregularEvent ?? false)) && !isSearchFieldEmpty
         
         UIView.animate(withDuration: 0.2) { [weak self] in
             guard let self else { return }
