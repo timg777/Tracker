@@ -28,7 +28,7 @@ final class TrackerCollectionCell: UICollectionViewCell {
     private var titleTopConstraint: NSLayoutConstraint?
     
     // MARK: - Internal Properties
-    var tracker: Tracker? {
+    var tracker: TrackerModel? {
         didSet {
             configureEmojiLabel()
             configureDaysLabel()

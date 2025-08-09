@@ -30,7 +30,7 @@ private extension ScheduleViewController {
         navigationController?.popViewController(animated: true)
     }
     
-    func didSelectWeekday(weekday: WeekdayOption?) {
+    func didSelectWeekday(weekday: Weekday?) {
         guard
             let weekday,
             let index = optionsManager.weekdays.firstIndex(where: {$0.weekday == weekday})
@@ -46,7 +46,7 @@ extension ScheduleViewController: UITableViewDataSource {
         _ tableView: UITableView,
         numberOfRowsInSection section: Int
     ) -> Int {
-        return WeekdayOption.allCases.count
+        return Weekday.allCases.count
     }
     
     func tableView(
@@ -66,7 +66,7 @@ extension ScheduleViewController: UITableViewDataSource {
         
         cell.weekdayOption = optionsManager.weekdays[indexPath.row]
         cell.didSelectWeekday = didSelectWeekday
-        cell.isLastItem = indexPath.row == WeekdayOption.allCases.count - 1
+        cell.isLastItem = indexPath.row == Weekday.allCases.count - 1
         
         return cell
     }
@@ -153,7 +153,7 @@ private extension ScheduleViewController {
                 constant: -16
             ),
             tableView.heightAnchor.constraint(
-                equalToConstant: ViewsHeightConstant.tableViewCellHeight.rawValue * CGFloat(WeekdayOption.allCases.count)
+                equalToConstant: ViewsHeightConstant.tableViewCellHeight.rawValue * CGFloat(Weekday.allCases.count)
             )
         ])
     }

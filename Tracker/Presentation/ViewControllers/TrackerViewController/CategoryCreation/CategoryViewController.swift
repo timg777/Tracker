@@ -2,7 +2,7 @@ import UIKit
 
 final class CategoryViewController: UIViewController {
     // MARK: - Private Views
-    private lazy var tableView: UITableView = {
+    private lazy var categoriesTableView: UITableView = {
         .init(
             frame: .zero,
             style: .insetGrouped
@@ -26,7 +26,7 @@ final class CategoryViewController: UIViewController {
     
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
-        tableView.reloadData()
+        categoriesTableView.reloadData()
 
         if optionsManager.categories.isEmpty {
             addNoContentPlaceholderView()
@@ -56,7 +56,7 @@ private extension CategoryViewController {
     
     func removeCategory(at: IndexPath) {
         optionsManager.categories.remove(at: at.section)
-        tableView.deleteRows(
+        categoriesTableView.deleteRows(
             at: [at],
             with: .top
         )
@@ -187,20 +187,20 @@ private extension CategoryViewController {
 // MARK: - Extensions + Private Views Configuring
 private extension CategoryViewController {
     func configureTableView() {
-        tableView.register(
+        categoriesTableView.register(
             CategoryOptionsCell.self,
             forCellReuseIdentifier: CategoryOptionsCell.reuseIdentifier
         )
-        tableView.dataSource = self
-        tableView.delegate = self
-        tableView.backgroundColor = .clear
-        tableView.allowsSelection = true
-        tableView.allowsMultipleSelection = false
-        tableView.separatorStyle = .singleLine
-        tableView.separatorInset =
+        categoriesTableView.dataSource = self
+        categoriesTableView.delegate = self
+        categoriesTableView.backgroundColor = .clear
+        categoriesTableView.allowsSelection = true
+        categoriesTableView.allowsMultipleSelection = false
+        categoriesTableView.separatorStyle = .singleLine
+        categoriesTableView.separatorInset =
         UIEdgeInsets(top: 0, left: 16, bottom: 0, right: 16)
-        tableView.insetsContentViewsToSafeArea = false
-        tableView.insetsLayoutMarginsFromSafeArea = false
+        categoriesTableView.insetsContentViewsToSafeArea = false
+        categoriesTableView.insetsLayoutMarginsFromSafeArea = false
     }
     
     func configureAddNewCategoryButton() {
@@ -216,24 +216,24 @@ private extension CategoryViewController {
 // MARK: - Extensions + Private CategoryViewController Constraints Activation
 private extension CategoryViewController {
     func tableViewConstraintsActivate() {
-        tableView.translatesAutoresizingMaskIntoConstraints = false
+        categoriesTableView.translatesAutoresizingMaskIntoConstraints = false
         
-        view.addSubview(tableView)
+        view.addSubview(categoriesTableView)
         
         NSLayoutConstraint.activate([
-            tableView.topAnchor.constraint(
+            categoriesTableView.topAnchor.constraint(
                 equalTo: view.safeAreaLayoutGuide.topAnchor,
                 constant: 24
             ),
-            tableView.leadingAnchor.constraint(
+            categoriesTableView.leadingAnchor.constraint(
                 equalTo: view.leadingAnchor,
                 constant: -8
             ),
-            tableView.trailingAnchor.constraint(
+            categoriesTableView.trailingAnchor.constraint(
                 equalTo: view.trailingAnchor,
                 constant: 8
             ),
-            tableView.bottomAnchor.constraint(
+            categoriesTableView.bottomAnchor.constraint(
                 equalTo: addNewCategoryButton.topAnchor,
                 constant: -24
             )

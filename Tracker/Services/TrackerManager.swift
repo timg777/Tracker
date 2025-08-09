@@ -1,11 +1,11 @@
-import Foundation
+import UIKit
 
 final class TrackerManager {
     static let shared = TrackerManager()
     private init() {}
     
     // MARK: - Internal Properties
-    var weekdays: [(weekday: WeekdayOption, isChoosen: Bool)] = [
+    var weekdays: [(weekday: Weekday, isChoosen: Bool)] = [
         (weekday: .monday, isChoosen: false),
         (weekday: .tuesday, isChoosen: false),
         (weekday: .wednesday, isChoosen: false),
@@ -47,7 +47,7 @@ extension TrackerManager {
     
     func createTracker(
         categoryTitle: String,
-        tracker: Tracker
+        tracker: TrackerModel
     ) {
         // MARK: - Мы допускаем одинаковые названия привычек, так как другие атрибуты включая индентификатор будут отличаться
         if let index = categories.firstIndex(where: {

@@ -308,6 +308,14 @@ extension TrackersViewController: UICollectionViewDelegateFlowLayout {
     ) -> CGFloat {
         9
     }
+    
+    func collectionView(
+        _ collectionView: UICollectionView,
+        layout collectionViewLayout: UICollectionViewLayout,
+        insetForSectionAt section: Int
+    ) -> UIEdgeInsets {
+        .init(top: 12, left: 0, bottom: 0, right: 0)
+    }
 }
 
 // MARK: - Extensions + Internal TrackersViewController -> UICollectionViewDelegate Conformance

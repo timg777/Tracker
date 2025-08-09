@@ -50,8 +50,8 @@ private extension TrackerSupplementaryView {
         addSubview(titleLabel)
         
         NSLayoutConstraint.activate([
-            titleLabel.topAnchor.constraint(
-                equalTo: topAnchor
+            titleLabel.bottomAnchor.constraint(
+                equalTo: bottomAnchor
             ),
             titleLabel.leadingAnchor.constraint(
                 equalTo: leadingAnchor,
