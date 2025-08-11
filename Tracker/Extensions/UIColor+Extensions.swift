@@ -1,38 +1,52 @@
 import UIKit
 
+// MARK: - Extensions + Internal UIColor Hex Representation
 extension UIColor {
-    var hexString: String {
-        var r: CGFloat = 0.0
-        var g: CGFloat = 0.0
-        var b: CGFloat = 0.0
-        var a: CGFloat = 0.0
-        
-        getRed(&r, green: &g, blue: &b, alpha: &a)
-        
-        let hex: Int = (Int)(r * 255) << 16 | (Int)(g * 255) << 8 | (Int)(b * 255)
-        
-        if a < 1.0 {
-            let alphaHex = (Int)(a * 255) << 24
-            return String(format: "#%08x", alphaHex | hex)
+    convenience init?(hex: String) {
+        var hexString = hex.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
+        if hexString.hasPrefix("#") {
+            hexString.removeFirst()
         }
-        
-        return String(format: "#%06x", hex)
+
+        let scanner = Scanner(string: hexString)
+
+        var rgbValue: UInt64 = 0
+        guard scanner.scanHexInt64(&rgbValue) else { return nil }
+
+        var red, green, blue, alpha: UInt64
+        switch hexString.count {
+        case 6:
+            red = (rgbValue >> 16)
+            green = (rgbValue >> 8 & 0xFF)
+            blue = (rgbValue & 0xFF)
+            alpha = 255
+        case 8:
+            red = (rgbValue >> 16)
+            green = (rgbValue >> 8 & 0xFF)
+            blue = (rgbValue & 0xFF)
+            alpha = rgbValue >> 24
+        default:
+            return nil
+        }
+
+        self.init(red: CGFloat(red) / 255, green: CGFloat(green) / 255, blue: CGFloat(blue) / 255, alpha: CGFloat(alpha) / 255)
     }
-    
-    convenience init?(hexString: String) {
-        let hex = hexString.trimmingCharacters(in: .whitespacesAndNewlines)
-                          .replacingOccurrences(of: "#", with: "")
-        
-        guard
-            hex.count == 6 || hex.count == 8,
-            let hexNumber = UInt64(hex, radix: 16)
-        else { return nil }
-        
-        let a = CGFloat((hexNumber & 0xFF000000) >> 24) / 255
-        let r = CGFloat((hexNumber & 0x00FF0000) >> 16) / 255
-        let g = CGFloat((hexNumber & 0x0000FF00) >> 8) / 255
-        let b = hex.count == 8 ? CGFloat(hexNumber & 0x000000FF) / 255 : 1.0
-        
-        self.init(red: r, green: g, blue: b, alpha: a)
+
+    func toHexString(includeAlpha: Bool = false) -> String? {
+        guard let components = self.cgColor.components else { return nil }
+
+        let red = Int(components[0] * 255.0)
+        let green = Int(components[1] * 255.0)
+        let blue = Int(components[2] * 255.0)
+
+        let hexString: String
+        if includeAlpha, let alpha = components.last {
+            let alphaValue = Int(alpha * 255.0)
+            hexString = String(format: "#%02X%02X%02X%02X", red, green, blue, alphaValue)
+        } else {
+            hexString = String(format: "#%02X%02X%02X", red, green, blue)
+        }
+
+        return hexString
     }
 }

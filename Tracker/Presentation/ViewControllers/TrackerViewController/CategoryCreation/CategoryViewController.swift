@@ -16,7 +16,7 @@ final class CategoryViewController: UIViewController {
     }()
     
     // MARK: - Private Constants
-    private let optionsManager = TrackerManager.shared
+    private let trackerManager = TrackerManager.shared
     
     // MARK: - View Life Cycles
     override func viewDidLoad() {
@@ -28,7 +28,7 @@ final class CategoryViewController: UIViewController {
         super.viewWillAppear(animated)
         categoriesTableView.reloadData()
 
-        if optionsManager.categories.isEmpty {
+        if trackerManager.categoriesCount == 0 {
             addNoContentPlaceholderView()
         } else {
             noContentPlaceholderView.verticalStackView.removeFromSuperview()
@@ -47,21 +47,21 @@ private extension CategoryViewController {
 
 // MARK: - Extensions + Private CategoryViewController Helpers
 private extension CategoryViewController {
-    func editCategory(at: IndexPath) {
-        let viewCpntroller = CategoryCreationViewController()
-        viewCpntroller.navigationItem.hidesBackButton = true
-        viewCpntroller.categoryToEdit = optionsManager.categories.map(\.title)[at.item]
-        navigationController?.pushViewController(viewCpntroller, animated: true)
+    func routeToCategoryEditViewController(at: IndexPath) {
+        let viewController = CategoryCreationViewController()
+        viewController.navigationItem.hidesBackButton = true
+        viewController.categoryIndexPath = at
+        navigationController?.pushViewController(viewController, animated: true)
     }
     
     func removeCategory(at: IndexPath) {
-        optionsManager.categories.remove(at: at.section)
+        trackerManager.deleteCategory(at: at)
         categoriesTableView.deleteRows(
             at: [at],
             with: .top
         )
         
-        if optionsManager.categories.isEmpty {
+        if trackerManager.categoriesCount == 0 {
             addNoContentPlaceholderView()
         }
     }
@@ -80,15 +80,13 @@ extension CategoryViewController: UITableViewDelegate {
         _ tableView: UITableView,
         didSelectRowAt indexPath: IndexPath
     ) {
-        guard
-            let categoryToSelect = optionsManager.categories[safe: indexPath.row]
-        else { return }
-        let isCancelSelection = optionsManager.choosenCategory == categoryToSelect.title
+        let categoryToSelect = trackerManager.fetchCategoryEntity(at: indexPath)
+        let isCancelSelection = trackerManager.choosenCategory == categoryToSelect.name
         
-        if optionsManager.choosenCategory == categoryToSelect.title {
-            optionsManager.choosenCategory = nil
+        if isCancelSelection {
+            trackerManager.choosenCategory = nil
         } else {
-            optionsManager.choosenCategory = categoryToSelect.title
+            trackerManager.choosenCategory = categoryToSelect.name
             NotificationCenter.default.post(
                 name: .categoryDidChangedNotification,
                 object: self
@@ -121,12 +119,12 @@ extension CategoryViewController: UITableViewDelegate {
         contextMenuConfigurationForRowAt indexPath: IndexPath,
         point: CGPoint
     ) -> UIContextMenuConfiguration? {
-        guard !optionsManager.categories.isEmpty else { return nil }
+        guard trackerManager.categoriesCount > 0 else { return nil }
         
         return .init(actionProvider: { actions in
             return UIMenu(children: [
                 UIAction(title: "Редактировать") { [weak self] _ in
-                    self?.editCategory(at: indexPath)
+                    self?.routeToCategoryEditViewController(at: indexPath)
                 },
                 UIAction(title: "Удалить", attributes: [.destructive]) { [weak self] _ in
                     self?.removeCategory(at: indexPath)
@@ -142,7 +140,7 @@ extension CategoryViewController: UITableViewDataSource {
         _ tableView: UITableView,
         numberOfRowsInSection section: Int
     ) -> Int {
-        optionsManager.categories.count
+        trackerManager.categoriesCount
     }
     
     func tableView(
@@ -160,10 +158,10 @@ extension CategoryViewController: UITableViewDataSource {
             return UITableViewCell()
         }
         
-        let category = optionsManager.categories[safe: indexPath.row]
+        let categoryName = trackerManager.fetchCategoryEntity(at: indexPath).name
         
-        cell.accessoryType = optionsManager.choosenCategory == category?.title ? .checkmark : .none
-        cell.title = category?.title
+        cell.accessoryType = trackerManager.choosenCategory == categoryName ? .checkmark : .none
+        cell.title = categoryName
         
         return cell
     }
@@ -178,7 +176,7 @@ private extension CategoryViewController {
         configureTableView()
         configureAddNewCategoryButton()
         
-        optionsManager.categories.isEmpty ? addNoContentPlaceholderView() : ()
+        trackerManager.categoriesCount == 0 ? addNoContentPlaceholderView() : ()
         addNewCategoryButtonConstraintsActivate()
         tableViewConstraintsActivate()
     }

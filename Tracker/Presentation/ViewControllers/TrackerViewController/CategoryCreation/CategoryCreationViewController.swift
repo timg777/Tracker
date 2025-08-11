@@ -22,7 +22,7 @@ final class CategoryCreationViewController: UIViewController {
     private let maximumTextLength: Int = 38
     
     // MARK: - Internal Properties
-    var categoryToEdit: String?
+    var categoryIndexPath: IndexPath?
     
     // MARK: - View Life Cycles
     override func viewDidLoad() {
@@ -43,16 +43,14 @@ final class CategoryCreationViewController: UIViewController {
 // MARK: - Extensions + Private CategoryCreationViewController Buttons Handlers
 private extension CategoryCreationViewController {
     @objc func didTapConfirmButton() {
-        guard let text = textField.text else { return }
-        if
-            let categoryToEdit,
-            let trackers = trackerManager.categories.first(where: { $0.title == categoryToEdit })?.trackers
-        {
-            let category = TrackerCategory(title: text, trackers: trackers)
-            trackerManager.categories.removeAll { $0.title == categoryToEdit }
-            trackerManager.categories.append(category)
+        guard
+            let text = textField.text
+        else { return }
+        
+        if let categoryIndexPath {
+            trackerManager.editCategory(at: categoryIndexPath, name: text)
         } else {
-            trackerManager.categories.append(.init(title: text, trackers: []))
+            trackerManager.addNewCategory(name: text)
         }
 
         navigationController?.popViewController(animated: true)
@@ -89,12 +87,7 @@ extension CategoryCreationViewController: UITextFieldDelegate {
         )
         
         let isOverLimit = updatedText.count > maximumTextLength
-        let alreadyExists =
-        trackerManager
-            .categories
-            .map((\.title))
-            .map({ $0.lowercased() })
-            .contains(updatedText.lowercased())
+        let alreadyExists = trackerManager.isNameUsed(name: updatedText)
         
         if updatedText.isEmpty || (!updatedText.isEmpty && alreadyExists) {
             confirmButton.makeInactive()
@@ -135,7 +128,7 @@ extension CategoryCreationViewController: UITextFieldDelegate {
 private extension CategoryCreationViewController {
     func setupViews() {
         view.backgroundColor = .ypWhite
-        navigationItem.title = categoryToEdit == nil ? "Новая категория" : "Редактирование категории"
+        navigationItem.title = categoryIndexPath == nil ? "Новая категория" : "Редактирование категории"
         
         configureTextField()
         configureConfirmButton()
@@ -151,9 +144,12 @@ private extension CategoryCreationViewController {
 private extension CategoryCreationViewController {
     func configureTextField() {
         textField.placeholderText = "Введите навзвание категории"
-        textField.text = categoryToEdit
         textField.delegate = self
         textField.layer.zPosition = 1
+        
+        guard let categoryIndexPath else { return }
+        let entity = trackerManager.fetchCategoryEntity(at: categoryIndexPath)
+        textField.text = entity.name
     }
     
     func configureConfirmButton() {

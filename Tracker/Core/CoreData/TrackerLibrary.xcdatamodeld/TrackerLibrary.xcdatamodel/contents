@@ -15,7 +15,6 @@
     </entity>
     <entity name="TrackerRecordEntity" representedClassName="TrackerRecordEntity" syncable="YES" codeGenerationType="class">
         <attribute name="date" attributeType="Date" usesScalarValueType="NO"/>
-        <attribute name="trackerID" optional="YES" attributeType="UUID" usesScalarValueType="NO"/>
         <relationship name="tracker" maxCount="1" deletionRule="Nullify" destinationEntity="TrackerEntity" inverseName="records" inverseEntity="TrackerEntity"/>
     </entity>
 </model>

@@ -43,7 +43,7 @@ final class TrackerCreationOptionsViewController: UIViewController {
     }()
     
     // MARK: - Private Constants
-    private let optionsManager = TrackerManager.shared
+    private let trackerManager = TrackerManager.shared
     
     // MARK: - Private Propetries
     private var warningBottomConstraint: NSLayoutConstraint?
@@ -160,26 +160,26 @@ private extension TrackerCreationOptionsViewController {
         guard
             let title = textField.text
         else { return }
-        let schedule = optionsManager.weekdays.filter { $0.isChoosen }.map( \.weekday )
+        let schedule = trackerManager.weekdays.filter { $0.isChoosen }.map( \.weekday )
         
-        optionsManager.createTracker(
-            categoryTitle: optionsManager.choosenCategory ?? GlobalConstants.defaultCategoryName,
-            tracker: .init(
+        trackerManager.addNewTracker(
+            .init(
                 id: .init(),
                 title: title,
                 emoji: emoji,
                 color: color,
                 schedule: schedule
-            )
+            ),
+            to: trackerManager.choosenCategory ?? GlobalConstants.defaultCategoryName
         )
         
-        optionsManager.choosenCategory = nil
+        trackerManager.choosenCategory = nil
         
         dismiss(animated: true)
     }
     
     @objc func didTapCancelButton() {
-        optionsManager.choosenCategory = nil
+        trackerManager.choosenCategory = nil
         dismiss(animated: true)
     }
 }
@@ -243,7 +243,7 @@ extension TrackerCreationOptionsViewController: UITableViewDataSource {
         cell.accessoryType = .disclosureIndicator
 
         if
-            let selectedOptions = optionsManager.selectedOptions(for: screenItem.name)
+            let selectedOptions = trackerManager.selectedOptions(for: screenItem.name)
         {
             cell.selectedOptions = selectedOptions
         }
@@ -365,7 +365,7 @@ extension TrackerCreationOptionsViewController: UICollectionViewDelegateFlowLayo
         layout collectionViewLayout: UICollectionViewLayout,
         insetForSectionAt section: Int
     ) -> UIEdgeInsets {
-        .init(top: 24, left: 18, bottom: 24, right: 18)
+        .init(top: 24, left: 18, bottom: 40, right: 18)
     }
     
     func collectionView(
@@ -679,7 +679,7 @@ private extension TrackerCreationOptionsViewController {
     }
     
     var hasAtLeastOneDaySelected: Bool {
-        optionsManager.weekdays.contains(where: { $0.isChoosen })
+        trackerManager.weekdays.contains(where: { $0.isChoosen })
     }
     
     var trackerOptionsSelected: Bool {
@@ -698,7 +698,7 @@ private extension TrackerCreationOptionsViewController {
                 let row = screenItems.firstIndex(where: { $0.name == .schedule })
             else { return }
             
-            let schedule = optionsManager.convertScheduleToString()
+            let schedule = trackerManager.convertScheduleToString()
             
             if
                 let cell = tableView.cellForRow(
@@ -721,7 +721,7 @@ private extension TrackerCreationOptionsViewController {
             guard
                 let self,
                 let row = screenItems.firstIndex(where: { $0.name == .category }),
-                let category = optionsManager.choosenCategory
+                let category = trackerManager.choosenCategory
             else { return }
             if
                 let cell = tableView.cellForRow(

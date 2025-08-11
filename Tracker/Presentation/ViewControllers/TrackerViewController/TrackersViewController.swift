@@ -1,61 +1,5 @@
 import UIKit
 
-let mockCategories: [TrackerCategory] = [
-    .init(
-        title: "Домашний уют Домашний уют Домашний уют",
-        trackers: [
-            .init(
-                id: .init(),
-                title: "Поливать растения",
-                emoji: "❤️",
-                color: .colorSelection18,
-                schedule: [.monday, .wednesday, .friday]
-            )
-        ]
-    ),
-    .init(
-        title: "Радостные мелочи",
-        trackers: [
-            .init(
-                id: .init(),
-                title: "Кошка заслонила камеру на созвоне",
-                emoji: "😻",
-                color: .colorSelection2,
-                schedule: [.tuesday, .thursday, .friday]
-            ),
-            .init(
-                id: .init(),
-                title: "Бабушка прислала открытку в вотсапе",
-                emoji: "🌺",
-                color: .colorSelection1,
-                schedule: [.monday, .wednesday, .friday]
-            ),
-            .init(
-                id: .init(),
-                title: "Свидания в апреле",
-                emoji: "❤️",
-                color: .colorSelection14,
-                schedule: [.monday, .wednesday, .friday]
-            )
-            ,
-            .init(
-                id: .init(),
-                title: "Свидания в апреле",
-                emoji: "❤️",
-                color: .colorSelection14,
-                schedule: [.monday, .wednesday, .friday]
-            ),
-            .init(
-                id: .init(),
-                title: "Свидания в апреле",
-                emoji: "❤️",
-                color: .colorSelection14,
-                schedule: [.monday, .wednesday, .friday]
-            )
-        ]
-    ),
-]
-
 final class TrackersViewController: UIViewController {
     // MARK: - Private Views
     private lazy var plusButton: UIButton = {
@@ -81,38 +25,6 @@ final class TrackersViewController: UIViewController {
     private let trackerManager = TrackerManager.shared
     
     // MARK: - Private Properties
-    private var filteredCategoriesToDisplay: [TrackerCategory] {
-        let dateFilter = currentDate
-        let titleFilter = navigationItem.searchController?.searchBar.text?.lowercased() ?? ""
-        
-         return trackerManager.categories
-            .map { category -> TrackerCategory in
-                let trackers = category.trackers.filter { tracker -> Bool in
-                    var isDateCorrect = false
-                    var isTitleCorrect = false
-                    
-                    if tracker.schedule.isEmpty {
-                        isDateCorrect = true
-                    } else {
-                        isDateCorrect = tracker.schedule.contains { weekday -> Bool in
-                            let calendarWeekday = Calendar.current.component(.weekday, from: dateFilter)
-                            return weekday.isEqual(to: calendarWeekday)
-                        }
-                    }
-                    
-                    if titleFilter.isEmpty {
-                        isTitleCorrect = true
-                    } else {
-                        isTitleCorrect = tracker.title.lowercased().contains(titleFilter)
-                    }
-
-                    return isDateCorrect && isTitleCorrect
-                }
-                
-                return .init(title: category.title, trackers: trackers)
-            }
-    }
-    private var completedTrackers = [TrackerRecord]()
     private var currentDate: Date = .now {
         didSet {
             filterOptionsChangedHandler()
@@ -157,48 +69,19 @@ private extension TrackersViewController {
     }
     
     @objc private func categoriesDidChanged() {
-        filterOptionsChangedHandler()
         habitsCollectionView.reloadData()
+        reloadNoContentPlaceholderView(with: .noSearchResults)
     }
     
-    func manageNoContentPlaceholderView(
-        with type: NoContentType,
-        remove: Bool,
-        erasePreviousType: Bool
-    ) {
-        if erasePreviousType {
-            noContentPlaceholderView.type = nil
-        }
-        
-        noContentPlaceholderView.verticalStackView.removeFromSuperview()
-        
-        guard
-            !remove || noContentPlaceholderView.type != type
-        else {
+    func reloadNoContentPlaceholderView(with type: NoContentType?) {
+        guard trackerManager.wholeTrackersCount > 0 else {
+            noContentPlaceholderView.type = .noCategoriesFound
+            noContentPlaceholderView.verticalStackView.isHidden = false
             return
         }
-        
+        let dataIsEmpty = habitsCollectionView.numberOfSections == 0
         noContentPlaceholderView.type = type
-        
-        switch type {
-        case .noSearchResults:
-            noContentPlaceholderView.title = "Ничего не найдено"
-            noContentPlaceholderView.image = UIImage(resource: .notFound)
-        case .noCategoriesFound:
-            noContentPlaceholderView.title = "Что будем отслеживать?"
-            noContentPlaceholderView.image = UIImage(resource: .noStat)
-        }
-        
-        habitsCollectionView.addSubview(noContentPlaceholderView.verticalStackView)
-        
-        NSLayoutConstraint.activate([
-            noContentPlaceholderView.verticalStackView.centerYAnchor.constraint(
-                equalTo: view.centerYAnchor
-            ),
-            noContentPlaceholderView.verticalStackView.centerXAnchor.constraint(
-                equalTo: view.centerXAnchor
-            )
-        ])
+        noContentPlaceholderView.verticalStackView.isHidden = !dataIsEmpty
     }
 }
 
@@ -267,15 +150,14 @@ extension TrackersViewController: UICollectionViewDelegateFlowLayout {
         layout collectionViewLayout: UICollectionViewLayout,
         referenceSizeForHeaderInSection section: Int
     ) -> CGSize {
-        guard let category = filteredCategoriesToDisplay[safe: section] else {
-            return .zero
-        }
-
-        guard !category.trackers.isEmpty else {
+        let category = trackerManager.fetchCategoryEntity(at: .init(item: section, section: 0))
+        let trackersCount = category.trackers?.count ?? 0
+        
+        guard trackersCount > 0 else {
             return .init(width: collectionView.bounds.width, height: 0)
         }
-        
-        let title = category.title
+
+        let title = category.name ?? ""
         let width = collectionView.bounds.width - 32
         let font = UIFont.ypMedium13
         let boundingRect = NSString(string: title).boundingRect(
@@ -325,19 +207,18 @@ extension TrackersViewController: UICollectionViewDelegate {
         viewForSupplementaryElementOfKind kind: String,
         at indexPath: IndexPath
     ) -> UICollectionReusableView {
-        
         guard
             let view = collectionView.dequeueReusableSupplementaryView(
                 ofKind: kind,
                 withReuseIdentifier: TrackerSupplementaryView.reuseHeaderIdentifier,
                 for: indexPath
             ) as? TrackerSupplementaryView,
-            let categories = filteredCategoriesToDisplay[safe: indexPath.section]
+            let title = trackerManager.sectionName(at: indexPath.section)
         else {
             return UICollectionReusableView()
         }
         
-        view.title = categories.trackers.isEmpty ? "" : categories.title
+        view.title = title
         return view
     }
 }
@@ -348,11 +229,11 @@ extension TrackersViewController: UICollectionViewDataSource {
         _ collectionView: UICollectionView,
         numberOfItemsInSection section: Int
     ) -> Int {
-        filteredCategoriesToDisplay[safe: section]?.trackers.count ?? 0
+        trackerManager.numberOfItemsInSection(section)
     }
     
     func numberOfSections(in collectionView: UICollectionView) -> Int {
-        filteredCategoriesToDisplay.count
+        trackerManager.numberOfSections
     }
     
     func collectionView(
@@ -366,46 +247,39 @@ extension TrackersViewController: UICollectionViewDataSource {
                 withReuseIdentifier: reuseIdentifier,
                 for: indexPath
             ) as? TrackerCollectionCell,
-            let category = filteredCategoriesToDisplay[safe: indexPath.section],
-            let tracker = category.trackers[safe: indexPath.item]
+            let tracker = trackerManager.tracker(at: indexPath)
         else {
             return UICollectionViewCell()
         }
         
-        let currentDateString = currentDate.convertToString(formatString: "dd.MM.yyyy")
-        
         cell.tracker = tracker
-        cell.isDayChecked = completedTrackers.contains {
-            $0.trackerId == tracker.id && $0.dateString == currentDateString
-        }
-        cell.daysCheckedCount = completedTrackers.filter {
-            $0.trackerId == tracker.id
-        }.count
-        cell.plusButtonTapped = { [weak self] in
-            guard let self else { return }
-            
-            let calendar = Calendar.current
-            guard calendar.startOfDay(for: Date()) >= calendar.startOfDay(for: self.currentDate) else { return }
-            
-            let isCurrentlyChecked = completedTrackers.contains {
-                $0.trackerId == tracker.id && $0.dateString == currentDateString
-            }
-            
-            if isCurrentlyChecked {
-                completedTrackers.removeAll {
-                    $0.trackerId == tracker.id && $0.dateString == currentDateString
-                }
-            } else {
-                completedTrackers.append(
-                    .init(
-                        trackerId: tracker.id,
-                        dateString: currentDateString
-                    )
-                )
-            }
-            collectionView.reloadItems(at: [indexPath])
-        }
+        cell.indexPath = indexPath
+        cell.delegate = self
         return cell
+    }
+}
+
+extension TrackersViewController: TrackerCollectionCellDelegate {
+    func dateIsLessThanTodayDate() -> Bool {
+        let calendar = Calendar.current
+        return calendar.startOfDay(for: Date()) >= calendar.startOfDay(for: self.currentDate)
+    }
+    
+    func toggleTrackerRecord(for uuid: UUID, updateWith indexPath: IndexPath) {
+        trackerManager.toggleTrackerRecord(
+            record: .init(trackerId: uuid, date: currentDate)
+        )
+        habitsCollectionView.reloadItems(at: [indexPath])
+    }
+    
+    func trackerRecordsCount(for uuid: UUID) -> Int {
+        trackerManager.countTrackerRecords(for: uuid)
+    }
+    
+    func isTrackerCompletedToday(uuid: UUID) -> Bool {
+        trackerManager.isTrackerCompleteToday(
+            record: .init(trackerId: uuid, date: currentDate)
+        )
     }
 }
 
@@ -419,14 +293,10 @@ private extension TrackersViewController {
         configureHabitsCollectionView()
         configureNavigationBar()
         
-        if trackerManager.categories.isEmpty {
-            manageNoContentPlaceholderView(
-                with: .noCategoriesFound,
-                remove: false,
-                erasePreviousType: true
-            )
-        }
         habitsCollectionViewConstraintsActivate()
+        noContentPlaceholderViewConstraintsActivate()
+        
+        reloadNoContentPlaceholderView(with: .noCategoriesFound)
     }
 }
 
@@ -438,23 +308,10 @@ extension TrackersViewController: UISearchResultsUpdating, UISearchBarDelegate {
         // TODO: - добавить .batchUpdates для UICollectionView для анимаций
     }
     
-//    func searchBarCancelButtonClicked(_ searchBar: UISearchBar) {
-//        filterOptionsChangedHandler()
-//    }
-//    func searchBarTextDidBeginEditing(_ searchBar: UISearchBar) {
-//        filterOptionsChangedHandler()
-//    }
-    
     func filterOptionsChangedHandler() {
-        let categoriesIsEmpty = filteredCategoriesToDisplay.filter {
-            !$0.trackers.isEmpty
-        }.isEmpty
-        
-        manageNoContentPlaceholderView(
-            with: .noCategoriesFound,
-            remove: !categoriesIsEmpty,
-            erasePreviousType: false
-        )
+        let trackerTitleFilter = navigationItem.searchController?.searchBar.text
+        trackerManager.updateFilterPredicate(trackerTitleFilter: trackerTitleFilter, dateFilter: currentDate)
+        reloadNoContentPlaceholderView(with: .noSearchResults)
     }
 }
 
@@ -536,6 +393,21 @@ private extension TrackersViewController {
 
 // MARK: - Extensions + Private TrackersViewController Views Constraints Activation
 private extension TrackersViewController {
+    func noContentPlaceholderViewConstraintsActivate() {
+        let placeholderView = noContentPlaceholderView.verticalStackView
+        placeholderView.isHidden = true
+        habitsCollectionView.addSubview(placeholderView)
+        
+        NSLayoutConstraint.activate([
+            placeholderView.centerYAnchor.constraint(
+                equalTo: habitsCollectionView.centerYAnchor
+            ),
+            placeholderView.centerXAnchor.constraint(
+                equalTo: habitsCollectionView.centerXAnchor
+            )
+        ])
+    }
+    
     func plusButtonConstraintsActivate() {
         plusButton.translatesAutoresizingMaskIntoConstraints = false
         

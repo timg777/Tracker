@@ -8,6 +8,7 @@ struct TrackerModel: Identifiable, Hashable {
     let schedule: [Weekday]
 }
 
+// MARK: - Extensions + Internal TrackerModel from entity Initialization
 extension TrackerModel {
     init?(entity: TrackerEntity) {
         let schedule = entity.schedule?.split(separator: " ").compactMap {
@@ -24,7 +25,7 @@ extension TrackerModel {
             let title = entity.title,
             let emoji = entity.emoji,
             let hexColor = entity.hexColor,
-            let color = UIColor(hexString: hexColor)
+            let color = UIColor(hex: hexColor)
         else {
             return nil
         }

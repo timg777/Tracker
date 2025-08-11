@@ -1,5 +1,12 @@
 import UIKit
 
+protocol TrackerCollectionCellDelegate: AnyObject {
+    func dateIsLessThanTodayDate() -> Bool
+    func toggleTrackerRecord(for uuid: UUID, updateWith indexPath: IndexPath)
+    func trackerRecordsCount(for uuid: UUID) -> Int
+    func isTrackerCompletedToday(uuid: UUID) -> Bool
+}
+
 final class TrackerCollectionCell: UICollectionViewCell {
     // MARK: - Static Constants
     static let reuseIdentifier = "TrackerCell"
@@ -27,28 +34,34 @@ final class TrackerCollectionCell: UICollectionViewCell {
     // MARK: - Private Properties
     private var titleTopConstraint: NSLayoutConstraint?
     
-    // MARK: - Internal Properties
-    var tracker: TrackerModel? {
+    weak var delegate: TrackerCollectionCellDelegate? {
         didSet {
+            guard
+                let _ = delegate,
+                let _ = tracker
+            else { return }
+            updateData()
+
             configureEmojiLabel()
-            configureDaysLabel()
             configureEmojiView()
-            configurePlusButton()
             configureTitleLabel()
             configureColoredRectangeContainerView()
         }
     }
-    var daysCheckedCount: Int? {
+    private var daysCheckedCount: Int? {
         didSet {
             configureDaysLabel()
         }
     }
-    var isDayChecked: Bool? {
+    private var isDayChecked: Bool? {
         didSet {
             configurePlusButton()
         }
     }
-    var plusButtonTapped: (() -> Void)?
+    
+    // MARK: - Internal Properties
+    var indexPath: IndexPath?
+    var tracker: TrackerModel?
     
     // MARK: - Initialization
     override init(frame: CGRect) {
@@ -65,7 +78,25 @@ final class TrackerCollectionCell: UICollectionViewCell {
 // MARK: - Extensions + Private TrackerCollectionCell Buttons Handlers
 private extension TrackerCollectionCell {
     @objc func didTapPlusButton() {
-        plusButtonTapped?()
+        guard
+            let tracker,
+            let delegate,
+            let indexPath,
+            delegate.dateIsLessThanTodayDate()
+        else { return }
+        
+        delegate.toggleTrackerRecord(for: tracker.id, updateWith: indexPath)
+        updateData()
+    }
+    
+    func updateData() {
+        guard
+            let tracker,
+            let delegate
+        else { return }
+        
+        isDayChecked = delegate.isTrackerCompletedToday(uuid: tracker.id)
+        daysCheckedCount = delegate.trackerRecordsCount(for: tracker.id)
     }
 }
 
@@ -73,13 +104,6 @@ private extension TrackerCollectionCell {
 private extension TrackerCollectionCell {
     func setupViews() {
         backgroundColor = .clear
-        
-        configureColoredRectangeContainerView()
-        configureEmojiLabel()
-        configureEmojiView()
-        configureTitleLabel()
-        configureDaysLabel()
-        configurePlusButton()
         
         coloredRectangeContainerViewConstraintsActivate()
         emojiViewConstraintsActivate()
@@ -134,9 +158,11 @@ private extension TrackerCollectionCell {
     }
     
     func configureDaysLabel() {
+        let title = "\(String(daysCheckedCount ?? 0)) \(getDayDeclension())"
+        
         daysLabel.attributedText =
         NSAttributedString(
-            string: String(daysCheckedCount ?? 0) + " " + getDaysDeclensions(),
+            string: title,
             attributes: [
                 .font: UIFont.ypMedium12,
                 .foregroundColor: UIColor.ypBlack
@@ -305,8 +331,8 @@ private extension TrackerCollectionCell {
 
 // MARK: - Extensions + Private Helpers
 private extension TrackerCollectionCell {
-    func getDaysDeclensions() -> String {
-        let daysCount = Int(daysLabel.text ?? "0") ?? 0
+    func getDayDeclension() -> String {
+        let daysCount = daysCheckedCount ?? 0
         let absCount = abs(daysCount) % 100
         let lastDigit = absCount % 10
         
