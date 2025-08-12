@@ -1,13 +1,7 @@
 import UIKit
 
-protocol TrackerCollectionCellDelegate: AnyObject {
-    func dateIsLessThanTodayDate() -> Bool
-    func toggleTrackerRecord(for uuid: UUID, updateWith indexPath: IndexPath)
-    func trackerRecordsCount(for uuid: UUID) -> Int
-    func isTrackerCompletedToday(uuid: UUID) -> Bool
-}
-
 final class TrackerCollectionCell: UICollectionViewCell {
+    
     // MARK: - Static Constants
     static let reuseIdentifier = "TrackerCell"
     
@@ -329,7 +323,7 @@ private extension TrackerCollectionCell {
     }
 }
 
-// MARK: - Extensions + Private Helpers
+// MARK: - Extensions + Private TrackerCollectionCell Helpers
 private extension TrackerCollectionCell {
     func getDayDeclension() -> String {
         let daysCount = daysCheckedCount ?? 0

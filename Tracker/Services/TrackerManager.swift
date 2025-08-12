@@ -1,8 +1,11 @@
-import UIKit
+import Foundation
 
 final class TrackerManager {
     
+    // MARK: - Internal Static Instance of TrackerManager [Singleton]
     static let shared = TrackerManager()
+    
+    // MARK: - Private Initialization
     private init() {
         trackerStore.delegate = self
         trackerCategoryStore.delegate = self
@@ -10,6 +13,7 @@ final class TrackerManager {
         createDefaultCategoryIfNeeded()
     }
     
+    // MARK: - Private Constants
     private let trackerStore = TrackerStore()
     private let trackerRecordStore = TrackerRecordStore()
     private let trackerCategoryStore = TrackerCategoryStore()
@@ -26,32 +30,17 @@ final class TrackerManager {
     ]
     
     var choosenCategory: String?
-    
-    func selectedOptions(for name: TrackerCreationOptionScreenItem.Name) -> String? {
-        switch name {
-        case .category:
-            return choosenCategory
-        case .schedule:
-            let schedule = convertScheduleToString()
-            return schedule.isEmpty ? nil : schedule
-        }
-    }
-    
-    private func createDefaultCategoryIfNeeded() {
-        guard fetchCategoriesEntities().isEmpty else { return }
-        
-        addNewCategory(name: GlobalConstants.defaultCategoryName)
-    }
 }
 
 extension TrackerManager: TrackerCategoryStoreDelegate, TrackerStoreDelegate {
+    @inlinable
     func didUpdate() {
         NotificationCenter.default.post(
             name: .categoriesDidChangedNotification,
             object: nil
         )
     }
-    
+    @inlinable
     func didUpdate(_ update: TrackerStoreUpdate) {
         NotificationCenter.default.post(
             name: .categoriesDidChangedNotification,
@@ -60,10 +49,12 @@ extension TrackerManager: TrackerCategoryStoreDelegate, TrackerStoreDelegate {
     }
 }
 
-// MARK: - Extensions + Internal TrackerManager CoollectionView Helpers
+// MARK: - Internal TrackerManager Extensions
+// MARK: - CollectionView Helpers
+// MARK: - Categories Managment
 extension TrackerManager {
-    
-    // MARK: - Categories
+    // MARK: - Category Data Getters
+    @inline(__always)
     var categoriesCount: Int {
         trackerCategoryStore.categoriesCount ?? 0
     }
@@ -73,15 +64,16 @@ extension TrackerManager {
     func fetchCategoryEntity(at indexPath: IndexPath) -> TrackerCategoryEntity {
         trackerCategoryStore.fetchCategoryEntity(at: indexPath)
     }
+    @inline(__always)
     func fetchCategoriesEntities() -> [TrackerCategoryEntity] {
         trackerCategoryStore.fetchCategoriesEntities()
     }
+    @inline(__always)
     func trackersCount(at indexPath: IndexPath) -> Int {
         trackerCategoryStore.fetchCategoryEntity(at: indexPath).trackers?.count ?? 0
     }
-    func isNameUsed(name: String) -> Bool {
-        trackerCategoryStore.isNameUsed(name: name)
-    }
+    
+    // MARK: - Category Creation
     func addNewCategory(name: String) {
         do {
             try trackerCategoryStore.addNewCategory(.init(title: name, trackers: []))
@@ -89,6 +81,8 @@ extension TrackerManager {
             print("Failed to add new category: \(error)")
         }
     }
+    
+    // MARK: - Category Update
     func editCategory(at indexPath: IndexPath, name: String) {
         do {
             try trackerCategoryStore.editCategory(at: indexPath, name: name)
@@ -96,6 +90,8 @@ extension TrackerManager {
             print("Failed to edit category: \(error)")
         }
     }
+    
+    // MARK: - Category deletion
     func deleteCategory(at indexPath: IndexPath) {
         do {
             try trackerCategoryStore.deleteCategory(at: indexPath)
@@ -110,52 +106,27 @@ extension TrackerManager {
             print("Failed to delete category: \(error)")
         }
     }
+}
+
+// MARK: - Internal TrackerManager Extensions
+// MARK: - CollectionView Helpers
+// MARK: - Trackers Managment
+extension TrackerManager {
     
-    // MARK: - Records
-    func toggleTrackerRecord(record: TrackerRecord) {
-        do {
-            guard let trackerEntity = trackerEntity(by: record.trackerId) else {
-                throw CoreDataError.notFound(entityType: TrackerEntity.self, param: record.trackerId.uuidString)
-            }
-            try trackerRecordStore.toggleTrackerRecord(record: record, with: trackerEntity)
-        } catch {
-            print("Failed to toggle tracker record: \(error)")
-        }
-    }
-    func countTrackerRecords(for uuid: UUID) -> Int {
-        do {
-            return try trackerRecordStore.countTrackerRecords(for: uuid)
-        } catch {
-            print("Failed to count tracker records: \(error)")
-            return 0
-        }
-    }
-    func isTrackerCompleteToday(record: TrackerRecord) -> Bool {
-        do {
-            return try trackerRecordStore.isTrackerCompleteToday(record: record)
-        } catch {
-            print("Failed to check if tracker is complete today: \(error)")
-            return false
-        }
-    }
-    
-    // MARK: - Trackers
+    // MARK: - Trackers Data Getter
+    @inlinable
     var wholeTrackersCount: Int {
         trackerStore.wholeTrackersCount
     }
-    func addNewTracker(_ tracker: TrackerModel, to categoryName: String) {
-        do {
-            try trackerStore.addNewTracker(tracker, to: categoryName)
-        } catch {
-            print("Failed to add new tracker: \(error)")
-        }
-    }
+    @inline(__always)
     var numberOfSections: Int {
         trackerStore.numberOfSections
     }
+    @inline(__always)
     func numberOfItemsInSection(_ section: Int) -> Int {
         trackerStore.numberOfItemsInSection(section)
     }
+    @inline(__always)
     func tracker(at indexPath: IndexPath) -> TrackerModel? {
         trackerStore.tracker(at: indexPath)
     }
@@ -167,9 +138,21 @@ extension TrackerManager {
             return nil
         }
     }
+    @inline(__always)
     func sectionName(at index: Int) -> String? {
         trackerStore.sectionName(at: index)
     }
+    
+    // MARK: - Tracker Creation
+    func addNewTracker(_ tracker: TrackerModel, to categoryName: String) {
+        do {
+            try trackerStore.addNewTracker(tracker, to: categoryName)
+        } catch {
+            print("Failed to add new tracker: \(error)")
+        }
+    }
+
+    // MARK: - Tracker deletion
     func deleteTracker(at indexPath: IndexPath) {
         do {
             try trackerStore.deleteTracker(at: indexPath)
@@ -177,12 +160,63 @@ extension TrackerManager {
             print("Failed to delete tracker: \(error)")
         }
     }
+    
+    // MARK: - Trackers Filter Update
+    @inline(__always)
     func updateFilterPredicate(trackerTitleFilter: String?, dateFilter: Date) {
         do {
             try trackerStore.updatePredicate(titleFilter: trackerTitleFilter, date: dateFilter)
         } catch {
             print("Failed to update filter predicate: \(error)")
         }
+    }
+}
+
+// MARK: - Internal TrackerManager Extensions
+// MARK: - CollectionView Helpers
+// MARK: - TrackerRecord Managment
+extension TrackerManager {
+    
+    // MARK: - TrackerRecord Existence Toggling
+    @inline(__always)
+    func toggleTrackerRecord(record: TrackerRecord) {
+        do {
+            guard let trackerEntity = trackerEntity(by: record.trackerId) else {
+                throw CoreDataError.notFound(entityType: TrackerEntity.self, param: record.trackerId.uuidString)
+            }
+            try trackerRecordStore.toggleTrackerRecord(record: record, with: trackerEntity)
+        } catch {
+            print("Failed to toggle tracker record: \(error)")
+        }
+    }
+    
+    // MARK: - TrackerRecord Data Getters
+    @inline(__always)
+    func countTrackerRecords(for uuid: UUID) -> Int {
+        do {
+            return try trackerRecordStore.countTrackerRecords(for: uuid)
+        } catch {
+            print("Failed to count tracker records: \(error)")
+            return 0
+        }
+    }
+    @inline(__always)
+    func isTrackerCompleteToday(record: TrackerRecord) -> Bool {
+        do {
+            return try trackerRecordStore.isTrackerCompleteToday(record: record)
+        } catch {
+            print("Failed to check if tracker is complete today: \(error)")
+            return false
+        }
+    }
+}
+
+// MARK: - Extensions + Private TrackerManager Helpers
+private extension TrackerManager {
+    func createDefaultCategoryIfNeeded() {
+        guard fetchCategoriesEntities().isEmpty else { return }
+        
+        addNewCategory(name: GlobalConstants.defaultCategoryName)
     }
 }
 
@@ -200,5 +234,15 @@ extension TrackerManager {
             resultString += "\(weekdayOption.weekday.briefName)" + (index != sortedWeekdays.count - 1 ? ", " : "")
         }
         return resultString
+    }
+    
+    func selectedOptions(for name: TrackerCreationOptionScreenItem.Name) -> String? {
+        switch name {
+        case .category:
+            return choosenCategory
+        case .schedule:
+            let schedule = convertScheduleToString()
+            return schedule.isEmpty ? nil : schedule
+        }
     }
 }

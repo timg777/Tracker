@@ -1,6 +1,7 @@
 import UIKit
 
 final class ScheduleOptionsCell: UITableViewCell {
+    
     // MARK: - Private Views
     private lazy var titleLabel: UILabel = {
         .init()

@@ -1,6 +1,7 @@
 import UIKit
 
 final class ScheduleViewController: UIViewController {
+    
     // MARK: - Private Views
     private lazy var tableView: UITableView = {
         .init()

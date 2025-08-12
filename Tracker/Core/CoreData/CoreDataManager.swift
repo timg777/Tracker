@@ -1,11 +1,14 @@
-import UIKit
 import CoreData
 
 final class CoreDataManager {
     
+    // MARK: - Internal Static Instance of CoreDataManager [Singleton]
     static let shared = CoreDataManager()
+    
+    // MARK: - Private Initialization
     private init() {}
     
+    // MARK: - Private Properties
     private lazy var persistentContainer: NSPersistentContainer = {
         let container = NSPersistentContainer(name: GlobalConstants.coreDataLibraryName)
         container.loadPersistentStores(completionHandler: { (description, error) in
@@ -16,14 +19,9 @@ final class CoreDataManager {
         return container
     }()
  
+    // MARK: - Internal Properties
+    @inlinable
     var context: NSManagedObjectContext {
         persistentContainer.viewContext
-    }
-    
-    @inline(__always)
-    func saveContext() throws {
-        if context.hasChanges {
-            try context.save()
-        }
     }
 }

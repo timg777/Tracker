@@ -1,6 +1,7 @@
 import UIKit
 
 final class TrackerCreationOptionsViewController: UIViewController {
+    
     // MARK: - Private Views
     private lazy var titleLabel: UILabel = {
         .init()
@@ -84,7 +85,9 @@ final class TrackerCreationOptionsViewController: UIViewController {
         optionsCollectionView.layoutIfNeeded()
         
         let height = optionsCollectionView.contentSize.height
-        optionsCollectionView.heightAnchor.constraint(equalToConstant: height).isActive = true
+        optionsCollectionView.heightAnchor.constraint(
+            equalToConstant: height
+        ).isActive = true
         
         containerView.layoutIfNeeded()
         scrollViewContainer.contentSize = containerView.bounds.size
@@ -273,7 +276,10 @@ extension TrackerCreationOptionsViewController: UICollectionViewDelegate {
         checkForAllOptionFieldsAreCompleted()
     }
     
-    func collectionView(_ collectionView: UICollectionView, shouldDeselectItemAt indexPath: IndexPath) -> Bool {
+    func collectionView(
+        _ collectionView: UICollectionView,
+        shouldDeselectItemAt indexPath: IndexPath
+    ) -> Bool {
         false
     }
 }
@@ -664,7 +670,9 @@ private extension TrackerCreationOptionsViewController {
 // MARK: - Extensions + Private TrackerCreationOptionsViewController Helpers
 private extension TrackerCreationOptionsViewController {
     func checkForAllOptionFieldsAreCompleted(newTextValue text: String = "DEFAULT") {
-        let isTrackerNameValid = isTrackerNameValid(text == "DEFAULT" ? textField.text ?? "" : text)
+        let text = text == "DEFAULT" ? textField.text ?? "" : text
+        
+        let isTrackerNameValid = isTrackerNameValid(text)
         let isButtonEnabled = (hasAtLeastOneDaySelected || (isIrregularEvent ?? false)) && isTrackerNameValid && trackerOptionsSelected
         
         UIView.animate(withDuration: 0.2) { [weak self] in

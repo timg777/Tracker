@@ -1,6 +1,7 @@
 import UIKit
 
 final class CategoryViewController: UIViewController {
+    
     // MARK: - Private Views
     private lazy var categoriesTableView: UITableView = {
         .init(
@@ -258,6 +259,9 @@ private extension CategoryViewController {
         
         view.addSubview(addNewCategoryButton)
         
-        addNewCategoryButton.activateConstraints(view: view, position: .bottom)
+        addNewCategoryButton.activateConstraints(
+            view: view,
+            position: .bottom
+        )
     }
 }

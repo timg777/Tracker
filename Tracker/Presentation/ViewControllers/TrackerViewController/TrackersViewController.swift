@@ -1,6 +1,7 @@
 import UIKit
 
 final class TrackersViewController: UIViewController {
+    
     // MARK: - Private Views
     private lazy var plusButton: UIButton = {
         .init()
@@ -259,15 +260,23 @@ extension TrackersViewController: UICollectionViewDataSource {
     }
 }
 
+// MARK: - Extensions + TrackersViewController -> TrackerCollectionCellDelegate Conformnace
 extension TrackersViewController: TrackerCollectionCellDelegate {
     func dateIsLessThanTodayDate() -> Bool {
         let calendar = Calendar.current
         return calendar.startOfDay(for: Date()) >= calendar.startOfDay(for: self.currentDate)
     }
     
-    func toggleTrackerRecord(for uuid: UUID, updateWith indexPath: IndexPath) {
+    func toggleTrackerRecord(
+        for uuid: UUID,
+        updateWith indexPath: IndexPath
+    ) {
         trackerManager.toggleTrackerRecord(
-            record: .init(trackerId: uuid, date: currentDate)
+            record:
+                .init(
+                    trackerId: uuid,
+                    date: currentDate
+                )
         )
         habitsCollectionView.reloadItems(at: [indexPath])
     }
@@ -278,7 +287,11 @@ extension TrackersViewController: TrackerCollectionCellDelegate {
     
     func isTrackerCompletedToday(uuid: UUID) -> Bool {
         trackerManager.isTrackerCompleteToday(
-            record: .init(trackerId: uuid, date: currentDate)
+            record:
+                .init(
+                    trackerId: uuid,
+                    date: currentDate
+                )
         )
     }
 }
@@ -300,8 +313,8 @@ private extension TrackersViewController {
     }
 }
 
-extension TrackersViewController: UISearchResultsUpdating, UISearchBarDelegate {
-    func updateSearchResults(for searchController: UISearchController) {
+extension TrackersViewController: DebouncedSearchControllerDelegate {
+    func debouncedSearchController(didChangeSearchText text: String) {
         filterOptionsChangedHandler()
         habitsCollectionView.reloadData()
         /// - Выполняется hard reset для UICollectionView без анимации
@@ -310,7 +323,10 @@ extension TrackersViewController: UISearchResultsUpdating, UISearchBarDelegate {
     
     func filterOptionsChangedHandler() {
         let trackerTitleFilter = navigationItem.searchController?.searchBar.text
-        trackerManager.updateFilterPredicate(trackerTitleFilter: trackerTitleFilter, dateFilter: currentDate)
+        trackerManager.updateFilterPredicate(
+            trackerTitleFilter: trackerTitleFilter,
+            dateFilter: currentDate
+        )
         reloadNoContentPlaceholderView(with: .noSearchResults)
     }
 }
@@ -333,12 +349,10 @@ private extension TrackersViewController {
             customView: datePicker
         )
         
-        navigationItem.searchController = UISearchController(searchResultsController: nil)
-        navigationItem.searchController?.searchResultsUpdater = self
-        navigationItem.searchController?.searchBar.delegate = self
-        navigationItem.searchController?.searchBar.placeholder = "Поиск"
-        navigationItem.searchController?.hidesNavigationBarDuringPresentation = false
-        navigationItem.searchController?.definesPresentationContext = true
+        let debouncedSearchController = DebouncedUISearchController(searchResultsController: nil)
+        debouncedSearchController.debounceDelegate = self
+        debouncedSearchController.debounce = 0.3
+        navigationItem.searchController = debouncedSearchController
     }
     
     func configurePlusButton() {

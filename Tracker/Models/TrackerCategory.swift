@@ -3,6 +3,7 @@ struct TrackerCategory: Hashable {
     let trackers: [TrackerModel]
 }
 
+// MARK: - Extensions + Internal TrackerCategory from entity Initialization
 extension TrackerCategory {
     init?(entity: TrackerCategoryEntity) {
         guard

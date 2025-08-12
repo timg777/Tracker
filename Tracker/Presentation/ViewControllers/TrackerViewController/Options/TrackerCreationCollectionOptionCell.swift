@@ -1,12 +1,8 @@
 import UIKit
 
-enum OptionCellType {
-    case emoji(Int)
-    case color(Int)
-}
-
 final class TrackerCreationCollectionOptionCell: UICollectionViewCell {
     
+    // MARK: - Internal Static Constants
     static let reuseIdentifier = "TrackerCreationCollectionOptionCell"
     
     static let emojies: [String] = [
@@ -24,6 +20,7 @@ final class TrackerCreationCollectionOptionCell: UICollectionViewCell {
         .colorSelection16, .colorSelection17, .colorSelection18
     ]
     
+    // MARK: - Private Views
     private lazy var emojiLabel: UILabel = {
         .init()
     }()
@@ -31,7 +28,8 @@ final class TrackerCreationCollectionOptionCell: UICollectionViewCell {
         .init()
     }()
     
-    var cellType: OptionCellType? {
+    // MARK: - Internal Properties
+    var cellType: TrackerCreationCollectionOptionCellType? {
         didSet {
             if let cellType {
                 switch cellType {
@@ -52,7 +50,7 @@ final class TrackerCreationCollectionOptionCell: UICollectionViewCell {
         didSet {
             if let cellType {
                 switch cellType {
-                case .emoji(_):
+                case .emoji:
                     layer.cornerRadius = 16
                     backgroundColor = isSelected ? .lightGray.withAlphaComponent(0.3) : .clear
                 case .color(let int):
@@ -66,6 +64,7 @@ final class TrackerCreationCollectionOptionCell: UICollectionViewCell {
         }
     }
     
+    // MARK: - Internal Initilization
     override init(frame: CGRect) {
         super.init(frame: frame)
         setUpView()
@@ -74,8 +73,11 @@ final class TrackerCreationCollectionOptionCell: UICollectionViewCell {
     required init?(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
-    
-    private func configureEmojiView(with emoji: String) {
+}
+
+// MARK: - Extensions + Inernal TrackerCreationCollectionOptionCell Views Setting Up
+private extension TrackerCreationCollectionOptionCell {
+    func configureEmojiView(with emoji: String) {
         emojiLabel.attributedText = NSAttributedString(string: emoji, attributes: [.font: UIFont.ypBold34])
         
         emojiLabel.translatesAutoresizingMaskIntoConstraints = false
@@ -86,7 +88,7 @@ final class TrackerCreationCollectionOptionCell: UICollectionViewCell {
         ])
     }
     
-    private func configureColorView(with color: UIColor) {
+    func configureColorView(with color: UIColor) {
         colorView.backgroundColor = color
         colorView.layer.cornerRadius = 8
         
@@ -112,7 +114,7 @@ final class TrackerCreationCollectionOptionCell: UICollectionViewCell {
         ])
     }
     
-    private func setUpView() {
+    func setUpView() {
         backgroundColor = .clear
     }
 }

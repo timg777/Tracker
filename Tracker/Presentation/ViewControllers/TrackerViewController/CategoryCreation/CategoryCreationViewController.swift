@@ -48,7 +48,10 @@ private extension CategoryCreationViewController {
         else { return }
         
         if let categoryIndexPath {
-            trackerManager.editCategory(at: categoryIndexPath, name: text)
+            trackerManager.editCategory(
+                at: categoryIndexPath,
+                name: text
+            )
         } else {
             trackerManager.addNewCategory(name: text)
         }
@@ -87,7 +90,7 @@ extension CategoryCreationViewController: UITextFieldDelegate {
         )
         
         let isOverLimit = updatedText.count > maximumTextLength
-        let alreadyExists = trackerManager.isNameUsed(name: updatedText)
+        let alreadyExists = trackerManager.isCategoryNameExist(updatedText)
         
         if updatedText.isEmpty || (!updatedText.isEmpty && alreadyExists) {
             confirmButton.makeInactive()

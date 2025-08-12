@@ -2,12 +2,15 @@ import UIKit
 
 final class TrackerSupplementaryView: UICollectionReusableView {
     
+    // MARK: - Internal Static Constants
     static let reuseHeaderIdentifier = "TrackerSupplementaryHeaderView"
     
+    // MARK: - Private Views
     private lazy var titleLabel: UILabel = {
         .init()
     }()
     
+    // MARK: - Internal Properties
     var title: String? {
         didSet {
             let paragraphStyle = NSMutableParagraphStyle()
@@ -31,6 +34,7 @@ final class TrackerSupplementaryView: UICollectionReusableView {
         }
     }
     
+    // MARK: - Internal Initialization
     override init(frame: CGRect) {
         super.init(frame: frame)
         

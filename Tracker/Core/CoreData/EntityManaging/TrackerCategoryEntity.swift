@@ -1,5 +1,6 @@
 import Foundation
 
+// MARK: - Extensions + Internal TrackerCategoryEntity Updater
 @objc(TrackerCategoryEntity)
 extension TrackerCategoryEntity {
     @nonobjc

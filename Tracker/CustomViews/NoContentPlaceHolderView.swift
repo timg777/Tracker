@@ -1,6 +1,7 @@
 import UIKit
 
 final class NoContentPlaceHolderView {
+    
     // MARK: - Private Views
     lazy var verticalStackView: UIStackView = {
         let stackView = UIStackView(arrangedSubviews: [imageView, label])

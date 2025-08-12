@@ -1,6 +1,7 @@
 import UIKit
 
 final class DisclosureOptionTableCell: UITableViewCell {
+    
     // MARK: - Static Constants
     static let reuseIdentifier = "OptionTableCellForDisclosureIndicator"
     

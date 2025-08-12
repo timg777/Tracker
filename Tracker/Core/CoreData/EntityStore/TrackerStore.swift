@@ -1,34 +1,11 @@
 import CoreData
 
-enum CoreDataError: Error {
-    case notFound(entityType: NSManagedObject.Type, param: String)
-    case failedToDelete(entityType: NSManagedObject.Type)
-}
-
-protocol TrackerStoreDelegate: AnyObject {
-    func didUpdate(_ update: TrackerStoreUpdate)
-}
-
-struct TrackerStoreUpdate {
-    let insertedIndices: IndexSet
-    let deletedIndices: IndexSet
-    let updatedIndices: IndexSet
-    let movedIndices: [Move]
-    let insertedSections: IndexSet
-    let deletedSections: IndexSet
-    
-    struct Move {
-        let oldSection: Int
-        let oldIndex: Int
-        let newSection: Int
-        let newIndex: Int
-    }
-}
-
 final class TrackerStore: NSObject {
     
+    // MARK: - Private Constants
     private let context: NSManagedObjectContext
     
+    // MARK: - Private Properties
     private var insertedIndices: IndexSet?
     private var deletedIndices: IndexSet?
     private var updatedIndices: IndexSet?
@@ -62,25 +39,17 @@ final class TrackerStore: NSObject {
         return controller
     }()
     
+    // MARK: - Internal Properties
     weak var delegate: TrackerStoreDelegate?
     
-    convenience override init() {
-        let context = CoreDataManager.shared.context
-        self.init(context: context)
-    }
-    
-    init(context: NSManagedObjectContext) {
+    // MARK: - Initialization
+    init(context: NSManagedObjectContext = CoreDataManager.shared.context) {
         self.context = context
     }
-    
-    func performFetchResults() {
-        do {
-            try controller.performFetch()
-        } catch {
-            print("Failed to perform initial fetch: \(error)")
-        }
-    }
-    
+}
+
+// MARK: - Extensions + Internal TrackerStore Data Managing
+extension TrackerStore {
     func addNewTracker(_ tracker: TrackerModel, to categoryName: String) throws {
         let trackerEntity = TrackerEntity(context: context)
         trackerEntity.update(with: tracker)
@@ -93,6 +62,28 @@ final class TrackerStore: NSObject {
         performFetchResults()
     }
     
+    func deleteTracker(_ entity: TrackerEntity) throws {
+        context.delete(entity)
+        try context.save()
+        performFetchResults()
+    }
+    
+    func deleteTracker(at indexPath: IndexPath) throws {
+        let entity = controller.object(at: indexPath)
+        try deleteTracker(entity)
+    }
+    
+    func performFetchResults() {
+        do {
+            try controller.performFetch()
+        } catch {
+            print("Failed to perform initial fetch: \(error)")
+        }
+    }
+}
+
+// MARK: - Extensions + Internal TrackerStore Helpers
+extension TrackerStore {
     private func findCategory(named name: String) throws -> TrackerCategoryEntity? {
         let fetchRequest = TrackerCategoryEntity.fetchRequest()
         fetchRequest.predicate = NSPredicate(format: "%K == %@", #keyPath(TrackerCategoryEntity.name), name)
@@ -102,12 +93,6 @@ final class TrackerStore: NSObject {
         } catch {
             throw CoreDataError.notFound(entityType: TrackerCategoryEntity.self, param: name)
         }
-    }
-    
-    func deleteTracker(_ entity: TrackerEntity) throws {
-        context.delete(entity)
-        try context.save()
-        performFetchResults()
     }
     
     var numberOfSections: Int {
@@ -138,12 +123,10 @@ final class TrackerStore: NSObject {
     func sectionName(at index: Int) -> String? {
         controller.sections?[safe: index]?.name
     }
-    
-    func deleteTracker(at indexPath: IndexPath) throws {
-        let entity = controller.object(at: indexPath)
-        try deleteTracker(entity)
-    }
-    
+}
+
+// MARK: - Extensions + Internal TrackerStore Predicate Filter Updating
+extension TrackerStore {
     func updatePredicate(titleFilter: String?, date: Date) throws {
         let calendar = Calendar.current
         let date = calendar.startOfDay(for: date)
@@ -184,6 +167,7 @@ final class TrackerStore: NSObject {
     }
 }
 
+// MARK: - Extensions + Internal TrackerStore -> NSFetchedResultsControllerDelegate Conformance
 extension TrackerStore: NSFetchedResultsControllerDelegate {
     func controllerWillChangeContent(_ controller: NSFetchedResultsController<any NSFetchRequestResult>) {
         insertedIndices = .init()
