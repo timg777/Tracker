@@ -3,6 +3,7 @@ import UIKit
 // MARK: - Extensions + Internal UIFont Custom Fonts
 extension UIFont {
     static let ypBold34 = UIFont.systemFont(ofSize: 34, weight: .bold)
+    static let ypBold32 = UIFont.systemFont(ofSize: 32, weight: .bold)
     static let ypBold31 = UIFont.systemFont(ofSize: 31, weight: .bold)
     static let ypBold19 = UIFont.systemFont(ofSize: 19, weight: .bold)
     static let ypRegular17 = UIFont.systemFont(ofSize: 17, weight: .regular)

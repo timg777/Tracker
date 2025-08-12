@@ -15,7 +15,10 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         
         window = UIWindow(windowScene: scene)
         
-        let rootViewController = TabBarController()
+        let rootViewController =
+        UserDefaultsService.shared.isOnboardingCompleted ?
+        TabBarController() :
+        OnboardingViewController()
         
         window?.rootViewController = rootViewController
         window?.makeKeyAndVisible()
