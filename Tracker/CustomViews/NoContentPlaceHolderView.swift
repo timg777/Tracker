@@ -1,12 +1,15 @@
 import UIKit
 
 final class NoContentPlaceHolderView {
+    
     // MARK: - Private Views
     lazy var verticalStackView: UIStackView = {
         let stackView = UIStackView(arrangedSubviews: [imageView, label])
         stackView.translatesAutoresizingMaskIntoConstraints = false
         stackView.axis = .vertical
         stackView.spacing = 8
+        stackView.alignment = .center
+        stackView.isUserInteractionEnabled = false
         return stackView
     }()
     private lazy var imageView: UIImageView = {
@@ -35,5 +38,19 @@ final class NoContentPlaceHolderView {
             imageView.contentMode = .scaleAspectFit
         }
     }
-    var type: NoContentType?
+    var type: NoContentType? {
+        didSet {
+            switch type {
+            case .noSearchResults:
+                title = "Ничего не найдено"
+                image = UIImage(resource: .notFound)
+            case .noCategoriesFound:
+                title = "Что будем отслеживать?"
+                image = UIImage(resource: .noStat)
+            case .none:
+                title = nil
+                image = nil
+            }
+        }
+    }
 }

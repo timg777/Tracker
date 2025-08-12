@@ -1,6 +1,7 @@
 import UIKit
 
 final class TrackerCreationViewController: UIViewController {
+    
     // MARK: - Private Views
     private lazy var titleLabel: UILabel = {
         .init()
@@ -30,17 +31,16 @@ final class TrackerCreationViewController: UIViewController {
 // MARK: - Extensions + Private TrackerCreationViewController Buttons Actions Handlers
 private extension TrackerCreationViewController {
     @objc func didTapHabitButton() {
-        let viewController = TrackerCreationOptionsViewController()
-        viewController.navigationItem.hidesBackButton = true
-        viewController.isModalInPresentation = true
-        viewController.isIrregularEvent = false
-        navigationController?.pushViewController(viewController, animated: true)
+        routeToTrackerCreationOptions(isIrregularEvent: false)
     }
     @objc func didTapIrregularEventButton() {
+        routeToTrackerCreationOptions(isIrregularEvent: true)
+    }
+    
+    func routeToTrackerCreationOptions(isIrregularEvent: Bool) {
         let viewController = TrackerCreationOptionsViewController()
         viewController.navigationItem.hidesBackButton = true
-        viewController.isModalInPresentation = true
-        viewController.isIrregularEvent = true
+        viewController.isIrregularEvent = isIrregularEvent
         navigationController?.pushViewController(viewController, animated: true)
     }
 }

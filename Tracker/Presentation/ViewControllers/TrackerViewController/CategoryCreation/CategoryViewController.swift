@@ -1,8 +1,9 @@
 import UIKit
 
 final class CategoryViewController: UIViewController {
+    
     // MARK: - Private Views
-    private lazy var tableView: UITableView = {
+    private lazy var categoriesTableView: UITableView = {
         .init(
             frame: .zero,
             style: .insetGrouped
@@ -16,7 +17,7 @@ final class CategoryViewController: UIViewController {
     }()
     
     // MARK: - Private Constants
-    private let optionsManager = TrackerManager.shared
+    private let trackerManager = TrackerManager.shared
     
     // MARK: - View Life Cycles
     override func viewDidLoad() {
@@ -26,9 +27,9 @@ final class CategoryViewController: UIViewController {
     
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
-        tableView.reloadData()
+        categoriesTableView.reloadData()
 
-        if optionsManager.categories.isEmpty {
+        if trackerManager.categoriesCount == 0 {
             addNoContentPlaceholderView()
         } else {
             noContentPlaceholderView.verticalStackView.removeFromSuperview()
@@ -47,21 +48,21 @@ private extension CategoryViewController {
 
 // MARK: - Extensions + Private CategoryViewController Helpers
 private extension CategoryViewController {
-    func editCategory(at: IndexPath) {
-        let viewCpntroller = CategoryCreationViewController()
-        viewCpntroller.navigationItem.hidesBackButton = true
-        viewCpntroller.categoryToEdit = optionsManager.categories.map(\.title)[at.item]
-        navigationController?.pushViewController(viewCpntroller, animated: true)
+    func routeToCategoryEditViewController(at: IndexPath) {
+        let viewController = CategoryCreationViewController()
+        viewController.navigationItem.hidesBackButton = true
+        viewController.categoryIndexPath = at
+        navigationController?.pushViewController(viewController, animated: true)
     }
     
     func removeCategory(at: IndexPath) {
-        optionsManager.categories.remove(at: at.section)
-        tableView.deleteRows(
+        trackerManager.deleteCategory(at: at)
+        categoriesTableView.deleteRows(
             at: [at],
             with: .top
         )
         
-        if optionsManager.categories.isEmpty {
+        if trackerManager.categoriesCount == 0 {
             addNoContentPlaceholderView()
         }
     }
@@ -80,15 +81,13 @@ extension CategoryViewController: UITableViewDelegate {
         _ tableView: UITableView,
         didSelectRowAt indexPath: IndexPath
     ) {
-        guard
-            let categoryToSelect = optionsManager.categories[safe: indexPath.row]
-        else { return }
-        let isCancelSelection = optionsManager.choosenCategory == categoryToSelect.title
+        let categoryToSelect = trackerManager.fetchCategoryEntity(at: indexPath)
+        let isCancelSelection = trackerManager.choosenCategory == categoryToSelect.name
         
-        if optionsManager.choosenCategory == categoryToSelect.title {
-            optionsManager.choosenCategory = nil
+        if isCancelSelection {
+            trackerManager.choosenCategory = nil
         } else {
-            optionsManager.choosenCategory = categoryToSelect.title
+            trackerManager.choosenCategory = categoryToSelect.name
             NotificationCenter.default.post(
                 name: .categoryDidChangedNotification,
                 object: self
@@ -121,12 +120,12 @@ extension CategoryViewController: UITableViewDelegate {
         contextMenuConfigurationForRowAt indexPath: IndexPath,
         point: CGPoint
     ) -> UIContextMenuConfiguration? {
-        guard !optionsManager.categories.isEmpty else { return nil }
+        guard trackerManager.categoriesCount > 0 else { return nil }
         
         return .init(actionProvider: { actions in
             return UIMenu(children: [
                 UIAction(title: "Редактировать") { [weak self] _ in
-                    self?.editCategory(at: indexPath)
+                    self?.routeToCategoryEditViewController(at: indexPath)
                 },
                 UIAction(title: "Удалить", attributes: [.destructive]) { [weak self] _ in
                     self?.removeCategory(at: indexPath)
@@ -142,7 +141,7 @@ extension CategoryViewController: UITableViewDataSource {
         _ tableView: UITableView,
         numberOfRowsInSection section: Int
     ) -> Int {
-        optionsManager.categories.count
+        trackerManager.categoriesCount
     }
     
     func tableView(
@@ -160,10 +159,10 @@ extension CategoryViewController: UITableViewDataSource {
             return UITableViewCell()
         }
         
-        let category = optionsManager.categories[safe: indexPath.row]
+        let categoryName = trackerManager.fetchCategoryEntity(at: indexPath).name
         
-        cell.accessoryType = optionsManager.choosenCategory == category?.title ? .checkmark : .none
-        cell.title = category?.title
+        cell.accessoryType = trackerManager.choosenCategory == categoryName ? .checkmark : .none
+        cell.title = categoryName
         
         return cell
     }
@@ -178,7 +177,7 @@ private extension CategoryViewController {
         configureTableView()
         configureAddNewCategoryButton()
         
-        optionsManager.categories.isEmpty ? addNoContentPlaceholderView() : ()
+        trackerManager.categoriesCount == 0 ? addNoContentPlaceholderView() : ()
         addNewCategoryButtonConstraintsActivate()
         tableViewConstraintsActivate()
     }
@@ -187,20 +186,20 @@ private extension CategoryViewController {
 // MARK: - Extensions + Private Views Configuring
 private extension CategoryViewController {
     func configureTableView() {
-        tableView.register(
+        categoriesTableView.register(
             CategoryOptionsCell.self,
             forCellReuseIdentifier: CategoryOptionsCell.reuseIdentifier
         )
-        tableView.dataSource = self
-        tableView.delegate = self
-        tableView.backgroundColor = .clear
-        tableView.allowsSelection = true
-        tableView.allowsMultipleSelection = false
-        tableView.separatorStyle = .singleLine
-        tableView.separatorInset =
+        categoriesTableView.dataSource = self
+        categoriesTableView.delegate = self
+        categoriesTableView.backgroundColor = .clear
+        categoriesTableView.allowsSelection = true
+        categoriesTableView.allowsMultipleSelection = false
+        categoriesTableView.separatorStyle = .singleLine
+        categoriesTableView.separatorInset =
         UIEdgeInsets(top: 0, left: 16, bottom: 0, right: 16)
-        tableView.insetsContentViewsToSafeArea = false
-        tableView.insetsLayoutMarginsFromSafeArea = false
+        categoriesTableView.insetsContentViewsToSafeArea = false
+        categoriesTableView.insetsLayoutMarginsFromSafeArea = false
     }
     
     func configureAddNewCategoryButton() {
@@ -216,24 +215,24 @@ private extension CategoryViewController {
 // MARK: - Extensions + Private CategoryViewController Constraints Activation
 private extension CategoryViewController {
     func tableViewConstraintsActivate() {
-        tableView.translatesAutoresizingMaskIntoConstraints = false
+        categoriesTableView.translatesAutoresizingMaskIntoConstraints = false
         
-        view.addSubview(tableView)
+        view.addSubview(categoriesTableView)
         
         NSLayoutConstraint.activate([
-            tableView.topAnchor.constraint(
+            categoriesTableView.topAnchor.constraint(
                 equalTo: view.safeAreaLayoutGuide.topAnchor,
                 constant: 24
             ),
-            tableView.leadingAnchor.constraint(
+            categoriesTableView.leadingAnchor.constraint(
                 equalTo: view.leadingAnchor,
                 constant: -8
             ),
-            tableView.trailingAnchor.constraint(
+            categoriesTableView.trailingAnchor.constraint(
                 equalTo: view.trailingAnchor,
                 constant: 8
             ),
-            tableView.bottomAnchor.constraint(
+            categoriesTableView.bottomAnchor.constraint(
                 equalTo: addNewCategoryButton.topAnchor,
                 constant: -24
             )
@@ -260,6 +259,9 @@ private extension CategoryViewController {
         
         view.addSubview(addNewCategoryButton)
         
-        addNewCategoryButton.activateConstraints(view: view, position: .bottom)
+        addNewCategoryButton.activateConstraints(
+            view: view,
+            position: .bottom
+        )
     }
 }

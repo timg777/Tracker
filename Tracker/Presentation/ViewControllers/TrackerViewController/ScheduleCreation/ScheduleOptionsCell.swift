@@ -1,6 +1,7 @@
 import UIKit
 
 final class ScheduleOptionsCell: UITableViewCell {
+    
     // MARK: - Private Views
     private lazy var titleLabel: UILabel = {
         .init()
@@ -16,13 +17,13 @@ final class ScheduleOptionsCell: UITableViewCell {
     static let reuseIdentifier = "NewHabitCreationScheduleOptionsCell"
     
     // MARK: - Internal Properties
-    var weekdayOption: (weekday: WeekdayOption, isChoosen: Bool)? {
+    var weekdayOption: (weekday: Weekday, isChoosen: Bool)? {
         didSet {
             titleLabel.text = weekdayOption?.weekday.fullName
             switchView.isOn = weekdayOption?.isChoosen ?? false
         }
     }
-    var didSelectWeekday: ((WeekdayOption?) -> Void)?
+    var didSelectWeekday: ((Weekday?) -> Void)?
     var isLastItem: Bool? {
         didSet {
             separator.isHidden = isLastItem ?? true

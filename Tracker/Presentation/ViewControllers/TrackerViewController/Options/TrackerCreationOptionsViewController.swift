@@ -1,6 +1,7 @@
 import UIKit
 
 final class TrackerCreationOptionsViewController: UIViewController {
+    
     // MARK: - Private Views
     private lazy var titleLabel: UILabel = {
         .init()
@@ -14,22 +15,38 @@ final class TrackerCreationOptionsViewController: UIViewController {
     private lazy var tableView: UITableView = {
         .init()
     }()
+    private lazy var optionsCollectionView: UICollectionView = {
+        let flowLayout = UICollectionViewFlowLayout()
+        flowLayout.scrollDirection = .vertical
+        let view = UICollectionView(frame: .zero, collectionViewLayout: flowLayout)
+        return view
+    }()
     private lazy var confirmButton: TrackerButton = {
         .init()
     }()
     private lazy var cancelButton: TrackerButton = {
         .init()
     }()
+    private lazy var buttonsStackView: UIStackView = {
+        let stackView = UIStackView(arrangedSubviews: [cancelButton, confirmButton])
+        stackView.axis = .horizontal
+        stackView.distribution = .fillEqually
+        stackView.spacing = 8
+        stackView.translatesAutoresizingMaskIntoConstraints = false
+        return stackView
+    }()
+    
     private lazy var scrollViewContainer: UIScrollView = {
+        .init()
+    }()
+    private lazy var containerView: UIView = {
         .init()
     }()
     
     // MARK: - Private Constants
-    private let optionsManager = TrackerManager.shared
+    private let trackerManager = TrackerManager.shared
     
     // MARK: - Private Propetries
-    private var confirmButtonBottomConstraint: NSLayoutConstraint?
-    private var cancelButtonBottomConstraint: NSLayoutConstraint?
     private var warningBottomConstraint: NSLayoutConstraint?
     private var screenItems: [TrackerCreationOptionScreenItem] = [
         .init(
@@ -60,6 +77,20 @@ final class TrackerCreationOptionsViewController: UIViewController {
      
         addObservers()
         setUpViews()
+    }
+    
+    override func viewDidLayoutSubviews() {
+        super.viewDidLayoutSubviews()
+        
+        optionsCollectionView.layoutIfNeeded()
+        
+        let height = optionsCollectionView.contentSize.height
+        optionsCollectionView.heightAnchor.constraint(
+            equalToConstant: height
+        ).isActive = true
+        
+        containerView.layoutIfNeeded()
+        scrollViewContainer.contentSize = containerView.bounds.size
     }
     
     deinit {
@@ -122,68 +153,37 @@ extension TrackerCreationOptionsViewController: UITextFieldDelegate {
 private extension TrackerCreationOptionsViewController {
     @objc func didTapConfirmButton() {
         guard
+            let collectionSelectionIndicies = optionsCollectionView.indexPathsForSelectedItems,
+            let emojiIndexPath = collectionSelectionIndicies.first(where: { $0.section == 0 }),
+            let colorIndexPath = collectionSelectionIndicies.first(where: { $0.section == 1 }),
+            let emoji = TrackerCreationCollectionOptionCell.emojies[safe: emojiIndexPath.item],
+            let color = TrackerCreationCollectionOptionCell.colors[safe: colorIndexPath.item]
+        else { return }
+        
+        guard
             let title = textField.text
         else { return }
-        let schedule = optionsManager.weekdays.filter { $0.isChoosen }.map( \.weekday )
+        let schedule = trackerManager.weekdays.filter { $0.isChoosen }.map( \.weekday )
         
-        optionsManager.createTracker(
-            categoryTitle: optionsManager.choosenCategory ?? "По умолчанию",
-            tracker: .init(
+        trackerManager.addNewTracker(
+            .init(
                 id: .init(),
                 title: title,
-                emoji: "🏝️",
-                color: UIColor.colorSelection18,
+                emoji: emoji,
+                color: color,
                 schedule: schedule
-            )
+            ),
+            to: trackerManager.choosenCategory ?? GlobalConstants.defaultCategoryName
         )
         
-        optionsManager.choosenCategory = nil
+        trackerManager.choosenCategory = nil
         
         dismiss(animated: true)
     }
     
     @objc func didTapCancelButton() {
-        optionsManager.choosenCategory = nil
+        trackerManager.choosenCategory = nil
         dismiss(animated: true)
-    }
-}
-
-// MARK: - Extensions + Private TrackerCreationOptionsViewController KeyboardEvent Hanlders
-private extension TrackerCreationOptionsViewController {
-    @objc func keyboardWillShow(notification: Notification) {
-        if let keyboardSize = (notification.userInfo?[UIResponder.keyboardFrameEndUserInfoKey] as? NSValue)?.cgRectValue {
-            setScrollViewContentInset(
-                UIEdgeInsets(
-                    top: 0,
-                    left: 0,
-                    bottom: keyboardSize.height - view.safeAreaInsets.bottom,
-                    right: 0
-                )
-            )
-        }
-    }
-    
-    @objc func keyboardWillHide(notification: Notification) {
-        setScrollViewContentInset(
-            UIEdgeInsets(
-                top: 0,
-                left: 0,
-                bottom: 0,
-                right: 0
-            )
-        )
-    }
-    
-    private func setScrollViewContentInset(_ inset: UIEdgeInsets) {
-        let constant = inset.bottom == 0 ? 0 : -inset.bottom - view.safeAreaInsets.bottom + 16
-        confirmButtonBottomConstraint?.constant = constant
-        cancelButtonBottomConstraint?.constant = constant
-        UIView.animate(
-            withDuration: 0.25
-        ) { [weak self] in
-            self?.scrollViewContainer.contentInset = inset
-            self?.view.layoutIfNeeded()
-        }
     }
 }
 
@@ -246,12 +246,140 @@ extension TrackerCreationOptionsViewController: UITableViewDataSource {
         cell.accessoryType = .disclosureIndicator
 
         if
-            let selectedOptions = optionsManager.selectedOptions(for: screenItem.name)
+            let selectedOptions = trackerManager.selectedOptions(for: screenItem.name)
         {
             cell.selectedOptions = selectedOptions
         }
         
         return cell
+    }
+}
+
+// MARK: - Extensions + Internal TrackerCreationOptionsViewController -> UICollectionViewDelegate Conformance
+extension TrackerCreationOptionsViewController: UICollectionViewDelegate {
+    func collectionView(
+        _ collectionView: UICollectionView,
+        didSelectItemAt indexPath: IndexPath
+    ) {
+        guard let selectionIndexSets = collectionView.indexPathsForSelectedItems else { return }
+        
+        guard
+            let currentSectionSelectionIndexPath = selectionIndexSets.first(where: {
+                $0.section == indexPath.section && $0.item != indexPath.item
+            })
+        else {
+            checkForAllOptionFieldsAreCompleted()
+            return
+        }
+         
+        collectionView.deselectItem(at: currentSectionSelectionIndexPath, animated: true)
+        checkForAllOptionFieldsAreCompleted()
+    }
+    
+    func collectionView(
+        _ collectionView: UICollectionView,
+        shouldDeselectItemAt indexPath: IndexPath
+    ) -> Bool {
+        false
+    }
+}
+
+// MARK: - Extensions + Internal TrackerCreationOptionsViewController -> UICollectionViewDataSource Conformance
+extension TrackerCreationOptionsViewController: UICollectionViewDataSource {
+    func collectionView(
+        _ collectionView: UICollectionView,
+        numberOfItemsInSection section: Int
+    ) -> Int {
+        18
+    }
+    
+    func numberOfSections(
+        in collectionView: UICollectionView
+    ) -> Int {
+        2
+    }
+    
+    func collectionView(
+        _ collectionView: UICollectionView,
+        cellForItemAt indexPath: IndexPath
+    ) -> UICollectionViewCell {
+        guard
+            let cell = collectionView.dequeueReusableCell(
+                withReuseIdentifier: TrackerCreationCollectionOptionCell.reuseIdentifier,
+                for: indexPath
+            ) as? TrackerCreationCollectionOptionCell
+        else {
+            return UICollectionViewCell()
+        }
+        
+        cell.cellType = indexPath.section == 0 ? .emoji(indexPath.item) : .color(indexPath.item)
+        
+        return cell
+    }
+    
+    func collectionView(
+        _ collectionView: UICollectionView,
+        viewForSupplementaryElementOfKind kind: String,
+        at indexPath: IndexPath
+    ) -> UICollectionReusableView {
+        guard
+            let header = collectionView.dequeueReusableSupplementaryView(
+                ofKind: kind,
+                withReuseIdentifier: TrackerCreationCollectionOptionSectionHeaderView.reuseIdentifier,
+                for: indexPath
+            ) as? TrackerCreationCollectionOptionSectionHeaderView
+        else {
+            return UICollectionReusableView()
+        }
+        
+        header.title = indexPath.section == 0 ? "Emoji" : "Цвет"
+        
+        return header
+    }
+}
+
+// MARK: - Extensions + Internal TrackerCreationOptionsViewController -> UICollectionViewDelegateFlowLayout Conformance
+extension TrackerCreationOptionsViewController: UICollectionViewDelegateFlowLayout {
+    func collectionView(
+        _ collectionView: UICollectionView,
+        layout collectionViewLayout: UICollectionViewLayout,
+        sizeForItemAt indexPath: IndexPath
+    ) -> CGSize {
+        let availableWidth = collectionView.bounds.width - 36
+        let cellSize = (availableWidth - 5 * 5) / 6
+        return CGSize(width: cellSize, height: cellSize)
+    }
+    
+    func collectionView(
+        _ collectionView: UICollectionView,
+        layout collectionViewLayout: UICollectionViewLayout,
+        minimumLineSpacingForSectionAt section: Int
+    ) -> CGFloat {
+        5
+    }
+    
+    func collectionView(
+        _ collectionView: UICollectionView,
+        layout collectionViewLayout: UICollectionViewLayout,
+        minimumInteritemSpacingForSectionAt section: Int
+    ) -> CGFloat {
+        0
+    }
+    
+    func collectionView(
+        _ collectionView: UICollectionView,
+        layout collectionViewLayout: UICollectionViewLayout,
+        insetForSectionAt section: Int
+    ) -> UIEdgeInsets {
+        .init(top: 24, left: 18, bottom: 40, right: 18)
+    }
+    
+    func collectionView(
+        _ collectionView: UICollectionView,
+        layout collectionViewLayout: UICollectionViewLayout,
+        referenceSizeForHeaderInSection section: Int
+    ) -> CGSize {
+        .init(width: collectionView.bounds.width, height: 18)
     }
 }
 
@@ -268,13 +396,15 @@ private extension TrackerCreationOptionsViewController {
         configureTableView()
         configureNavigationBar()
         configureScrollViewContainer()
+        configureOptionsCollectionView()
         
+        scrollViewContainerConstraintsActivate()
+        containerViewConstraintsActivate()
         searchFieldConstraintsActivate()
         availableTextRangeReachedLabelConstraintsActivate()
-        confirmButtonConstraintsActivate()
-        cancelButtonConstraintsActivate()
-        scrollViewContainerConstraintsActivate()
         tableViewConstraintsActivate()
+        optionsCollectionViewConstraintsActivate()
+        buttonsStackViewConstraintsActivate()
     }
 }
 
@@ -307,6 +437,22 @@ private extension TrackerCreationOptionsViewController {
         tableView.tableHeaderView = nil
         tableView.layer.cornerRadius = 16
         tableView.clipsToBounds = true
+    }
+    
+    func configureOptionsCollectionView() {
+        optionsCollectionView.delegate = self
+        optionsCollectionView.dataSource = self
+        optionsCollectionView.register(
+            TrackerCreationCollectionOptionCell.self,
+            forCellWithReuseIdentifier: TrackerCreationCollectionOptionCell.reuseIdentifier
+        )
+        optionsCollectionView.register(
+            TrackerCreationCollectionOptionSectionHeaderView.self,
+            forSupplementaryViewOfKind: UICollectionView.elementKindSectionHeader,
+            withReuseIdentifier: TrackerCreationCollectionOptionSectionHeaderView.reuseIdentifier
+        )
+        optionsCollectionView.allowsMultipleSelection = true
+        optionsCollectionView.isScrollEnabled = false
     }
     
     func configureNavigationBar() {
@@ -367,13 +513,13 @@ private extension TrackerCreationOptionsViewController {
     func availableTextRangeReachedLabelConstraintsActivate() {
         availableTextRangeReachedLabel.translatesAutoresizingMaskIntoConstraints = false
         
-        view.addSubview(availableTextRangeReachedLabel)
+        containerView.addSubview(availableTextRangeReachedLabel)
         
         warningBottomConstraint = availableTextRangeReachedLabel.bottomAnchor.constraint(equalTo: textField.bottomAnchor)
         
         NSLayoutConstraint.activate([
             availableTextRangeReachedLabel.centerXAnchor.constraint(
-                equalTo: view.centerXAnchor
+                equalTo: containerView.centerXAnchor
             ),
             warningBottomConstraint ?? availableTextRangeReachedLabel.bottomAnchor.constraint(
                 equalTo: textField.bottomAnchor
@@ -384,23 +530,42 @@ private extension TrackerCreationOptionsViewController {
     func tableViewConstraintsActivate() {
         tableView.translatesAutoresizingMaskIntoConstraints = false
         
-        scrollViewContainer.addSubview(tableView)
+        containerView.addSubview(tableView)
     
         NSLayoutConstraint.activate([
             tableView.topAnchor.constraint(
-                equalTo: scrollViewContainer.topAnchor
+                equalTo: availableTextRangeReachedLabel.bottomAnchor,
+                constant: 24
             ),
             tableView.leadingAnchor.constraint(
-                equalTo: scrollViewContainer.leadingAnchor
+                equalTo: containerView.leadingAnchor,
+                constant: 16
             ),
             tableView.trailingAnchor.constraint(
-                equalTo: scrollViewContainer.trailingAnchor
-            ),
-            tableView.widthAnchor.constraint(
-                equalToConstant: view.bounds.width - 32
+                equalTo: containerView.trailingAnchor,
+                constant: -16
             ),
             tableView.heightAnchor.constraint(
                 equalToConstant: ViewsHeightConstant.tableViewCellHeight.rawValue * CGFloat(screenItems.count)
+            )
+        ])
+    }
+    
+    func optionsCollectionViewConstraintsActivate() {
+        optionsCollectionView.translatesAutoresizingMaskIntoConstraints = false
+        
+        containerView.addSubview(optionsCollectionView)
+        
+        NSLayoutConstraint.activate([
+            optionsCollectionView.topAnchor.constraint(
+                equalTo: tableView.bottomAnchor,
+                constant: 32
+            ),
+            optionsCollectionView.leadingAnchor.constraint(
+                equalTo: view.leadingAnchor
+            ),
+            optionsCollectionView.trailingAnchor.constraint(
+                equalTo: view.trailingAnchor
             )
         ])
     }
@@ -412,20 +577,40 @@ private extension TrackerCreationOptionsViewController {
         
         NSLayoutConstraint.activate([
             scrollViewContainer.topAnchor.constraint(
-                equalTo: availableTextRangeReachedLabel.bottomAnchor,
-                constant: 24
-            ),
-            scrollViewContainer.leadingAnchor.constraint(
-                equalTo: view.leadingAnchor,
-                constant: 16
-            ),
-            scrollViewContainer.trailingAnchor.constraint(
-                equalTo: view.trailingAnchor,
-                constant: -16
+                equalTo: view.topAnchor
             ),
             scrollViewContainer.bottomAnchor.constraint(
-                equalTo: confirmButton.topAnchor,
-                constant: 24
+                equalTo: view.bottomAnchor
+            ),
+            scrollViewContainer.leadingAnchor.constraint(
+                equalTo: view.leadingAnchor
+            ),
+            scrollViewContainer.trailingAnchor.constraint(
+                equalTo: view.trailingAnchor
+            )
+        ])
+    }
+    
+    func containerViewConstraintsActivate() {
+        containerView.translatesAutoresizingMaskIntoConstraints = false
+        
+        scrollViewContainer.addSubview(containerView)
+        
+        NSLayoutConstraint.activate([
+            containerView.topAnchor.constraint(
+                equalTo: scrollViewContainer.topAnchor
+            ),
+            containerView.bottomAnchor.constraint(
+                equalTo: scrollViewContainer.bottomAnchor
+            ),
+            containerView.leadingAnchor.constraint(
+                equalTo: scrollViewContainer.leadingAnchor
+            ),
+            containerView.trailingAnchor.constraint(
+                equalTo: scrollViewContainer.trailingAnchor
+            ),
+            containerView.widthAnchor.constraint(
+                equalTo: scrollViewContainer.widthAnchor
             )
         ])
     }
@@ -433,66 +618,51 @@ private extension TrackerCreationOptionsViewController {
     func searchFieldConstraintsActivate() {
         textField.translatesAutoresizingMaskIntoConstraints = false
         
-        view.addSubview(textField)
+        containerView.addSubview(textField)
         
         NSLayoutConstraint.activate([
             textField.leadingAnchor.constraint(
-                equalTo: view.leadingAnchor,
+                equalTo: containerView.leadingAnchor,
                 constant: 16
             ),
             textField.trailingAnchor.constraint(
-                equalTo: view.trailingAnchor,
+                equalTo: containerView.trailingAnchor,
                 constant: -16
             ),
             textField.heightAnchor.constraint(
                 equalToConstant: 75
             ),
             textField.topAnchor.constraint(
-                equalTo: view.safeAreaLayoutGuide.topAnchor,
+                equalTo: containerView.safeAreaLayoutGuide.topAnchor,
                 constant: 38
             )
         ])
     }
     
-    func confirmButtonConstraintsActivate() {
-        confirmButton.translatesAutoresizingMaskIntoConstraints = false
+    func buttonsStackViewConstraintsActivate() {
+        buttonsStackView.translatesAutoresizingMaskIntoConstraints = false
         
-        view.addSubview(confirmButton)
-        
-        confirmButtonBottomConstraint = confirmButton.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor)
+        containerView.addSubview(buttonsStackView)
         
         NSLayoutConstraint.activate([
-            confirmButton.leadingAnchor.constraint(
-                equalTo: view.centerXAnchor,
-                constant: 4
+            buttonsStackView.heightAnchor.constraint(
+                equalToConstant: ViewsHeightConstant.buttonHeight.rawValue
             ),
-            confirmButton.trailingAnchor.constraint(
-                equalTo: view.trailingAnchor,
-                constant: -16
-            ),
-            confirmButtonBottomConstraint ?? confirmButton.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor),
-            confirmButton.heightAnchor.constraint(equalToConstant: ViewsHeightConstant.buttonHeight.rawValue)
-        ])
-    }
-    
-    func cancelButtonConstraintsActivate() {
-        cancelButton.translatesAutoresizingMaskIntoConstraints = false
-        
-        view.addSubview(cancelButton)
-        
-        cancelButtonBottomConstraint = cancelButton.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor)
-        
-        NSLayoutConstraint.activate([
-            cancelButton.leadingAnchor.constraint(
-                equalTo: view.leadingAnchor,
+            buttonsStackView.topAnchor.constraint(
+                equalTo: optionsCollectionView.bottomAnchor,
                 constant: 16
             ),
-            cancelButton.trailingAnchor.constraint(
-                equalTo: view.centerXAnchor,
-                constant: -4
+            buttonsStackView.leadingAnchor.constraint(
+                equalTo: containerView.leadingAnchor,
+                constant: 20
             ),
-            cancelButtonBottomConstraint ?? cancelButton.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor),
-            cancelButton.heightAnchor.constraint(equalToConstant: ViewsHeightConstant.buttonHeight.rawValue)
+            buttonsStackView.trailingAnchor.constraint(
+                equalTo: containerView.trailingAnchor,
+                constant: -20
+            ),
+            buttonsStackView.bottomAnchor.constraint(
+                equalTo: containerView.bottomAnchor
+            )
         ])
     }
 }
@@ -501,16 +671,27 @@ private extension TrackerCreationOptionsViewController {
 private extension TrackerCreationOptionsViewController {
     func checkForAllOptionFieldsAreCompleted(newTextValue text: String = "DEFAULT") {
         let text = text == "DEFAULT" ? textField.text ?? "" : text
-        let hasAtLeastOneDaySelected = optionsManager.weekdays.contains(where: { $0.isChoosen })
-        let isSearchFieldEmpty = text.isEmpty
         
-        let isButtonEnable = (hasAtLeastOneDaySelected || (isIrregularEvent ?? false)) && !isSearchFieldEmpty
+        let isTrackerNameValid = isTrackerNameValid(text)
+        let isButtonEnabled = (hasAtLeastOneDaySelected || (isIrregularEvent ?? false)) && isTrackerNameValid && trackerOptionsSelected
         
         UIView.animate(withDuration: 0.2) { [weak self] in
             guard let self else { return }
-            confirmButton.layer.opacity = isButtonEnable ? 1 : 0.4
-            confirmButton.isEnabled = isButtonEnable
+            confirmButton.layer.opacity = isButtonEnabled ? 1 : 0.4
+            confirmButton.isEnabled = isButtonEnabled
         }
+    }
+    
+    func isTrackerNameValid(_ name: String) -> Bool {
+        name.count > 0
+    }
+    
+    var hasAtLeastOneDaySelected: Bool {
+        trackerManager.weekdays.contains(where: { $0.isChoosen })
+    }
+    
+    var trackerOptionsSelected: Bool {
+        optionsCollectionView.indexPathsForSelectedItems?.count ?? 0 == 2
     }
     
     func addObservers() {
@@ -525,7 +706,7 @@ private extension TrackerCreationOptionsViewController {
                 let row = screenItems.firstIndex(where: { $0.name == .schedule })
             else { return }
             
-            let schedule = optionsManager.convertScheduleToString()
+            let schedule = trackerManager.convertScheduleToString()
             
             if
                 let cell = tableView.cellForRow(
@@ -548,7 +729,7 @@ private extension TrackerCreationOptionsViewController {
             guard
                 let self,
                 let row = screenItems.firstIndex(where: { $0.name == .category }),
-                let category = optionsManager.choosenCategory
+                let category = trackerManager.choosenCategory
             else { return }
             if
                 let cell = tableView.cellForRow(
@@ -562,19 +743,6 @@ private extension TrackerCreationOptionsViewController {
                 checkForAllOptionFieldsAreCompleted()
             }
         }
-        
-        NotificationCenter.default.addObserver(
-            self,
-            selector: #selector(keyboardWillShow),
-            name: UIResponder.keyboardWillShowNotification,
-            object: nil
-        )
-        NotificationCenter.default.addObserver(
-            self,
-            selector: #selector(keyboardWillHide),
-            name: UIResponder.keyboardWillHideNotification,
-            object: nil
-        )
     }
 }
 
