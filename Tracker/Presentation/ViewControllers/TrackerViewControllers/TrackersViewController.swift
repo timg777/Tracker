@@ -23,7 +23,9 @@ final class TrackersViewController: UIViewController {
     }()
     
     // MARK: - Private Constants
-    private let trackerManager = TrackerManager.shared
+    private var trackerViewModel = TrackerManager.shared.trackerViewModel
+    private var trackerRecordViewModel = TrackerManager.shared.trackerRecordViewModel
+    private var categoryViewModel = TrackerManager.shared.categoryViewModel
     
     // MARK: - Private Properties
     private var currentDate: Date = .now {
@@ -39,10 +41,42 @@ final class TrackersViewController: UIViewController {
         addObservers()
         setUpViews()
         currentDate = .now
+        
+        handleViewModelsEvents()
     }
     
     deinit {
         NotificationCenter.default.removeObserver(self)
+    }
+}
+
+// MARK: - Extensions + Priavate CategoryCreationViewController ViewModel Events Handling
+private extension TrackersViewController {
+    func handleViewModelsEvents() {
+        trackerViewModel.onTrackersChanged = { [weak self] in
+            self?.categoriesDidChanged()
+        }
+        trackerViewModel.onError = { [weak self] error in
+            guard let _ = self else { return }
+            print("An error occurred: \(error)")
+        }
+        
+        trackerRecordViewModel.trackerEntity = { [weak self] uuid in
+            guard let self else { return nil }
+            return trackerViewModel.trackerEntity(by: uuid)
+        }
+        trackerRecordViewModel.onError = { [weak self] error in
+            guard let _ = self else { return }
+            print("An error occurred: \(error)")
+        }
+        
+        categoryViewModel.onCategoriesChanged = { [weak self] in
+            self?.categoriesDidChanged()
+        }
+        categoryViewModel.onError = { [weak self] error in
+            guard let _ = self else { return }
+            print("An error occurred: \(error)")
+        }
     }
 }
 
@@ -75,7 +109,8 @@ private extension TrackersViewController {
     }
     
     func reloadNoContentPlaceholderView(with type: NoContentType?) {
-        guard trackerManager.wholeTrackersCount > 0 else {
+        guard trackerViewModel.wholeTrackersCount > 0
+        else {
             noContentPlaceholderView.type = .noCategoriesFound
             noContentPlaceholderView.verticalStackView.isHidden = false
             return
@@ -83,6 +118,41 @@ private extension TrackersViewController {
         let dataIsEmpty = habitsCollectionView.numberOfSections == 0
         noContentPlaceholderView.type = type
         noContentPlaceholderView.verticalStackView.isHidden = !dataIsEmpty
+    }
+    
+    func deleteTracker(at indexPath: IndexPath) {
+        trackerViewModel.deleteTracker(at: indexPath)
+        habitsCollectionView.reloadData()
+        reloadNoContentPlaceholderView(with: .noSearchResults)
+    }
+    
+    func clarifyTrackerDeletion(at indexPath: IndexPath) {
+        let alert = UIAlertController(
+            title: "Уверены, что хотите удалить трекер?",
+            message: nil,
+            preferredStyle: .actionSheet
+        )
+        alert.addAction(
+            .init(
+                title: "Отменить",
+                style: .cancel,
+                handler: { [weak self] _ in
+                    guard let _ = self else { return }
+                    alert.dismiss(animated: true)
+                }
+            )
+        )
+        alert.addAction(
+            .init(
+                title: "Удалить",
+                style: .destructive,
+                handler: { [weak self] _ in
+                    self?.deleteTracker(at: indexPath)
+                }
+            )
+        )
+        
+        present(alert, animated: true)
     }
 }
 
@@ -151,7 +221,7 @@ extension TrackersViewController: UICollectionViewDelegateFlowLayout {
         layout collectionViewLayout: UICollectionViewLayout,
         referenceSizeForHeaderInSection section: Int
     ) -> CGSize {
-        let category = trackerManager.fetchCategoryEntity(at: .init(item: section, section: 0))
+        let category = categoryViewModel.fetchCategoryEntity(at: .init(item: section, section: 0))
         let trackersCount = category.trackers?.count ?? 0
         
         guard trackersCount > 0 else {
@@ -214,7 +284,7 @@ extension TrackersViewController: UICollectionViewDelegate {
                 withReuseIdentifier: TrackerSupplementaryView.reuseHeaderIdentifier,
                 for: indexPath
             ) as? TrackerSupplementaryView,
-            let title = trackerManager.sectionName(at: indexPath.section)
+            let title = trackerViewModel.sectionName(at: indexPath.section)
         else {
             return UICollectionReusableView()
         }
@@ -230,11 +300,11 @@ extension TrackersViewController: UICollectionViewDataSource {
         _ collectionView: UICollectionView,
         numberOfItemsInSection section: Int
     ) -> Int {
-        trackerManager.numberOfItemsInSection(section)
+        trackerViewModel.numberOfItemsInSection(section)
     }
     
     func numberOfSections(in collectionView: UICollectionView) -> Int {
-        trackerManager.numberOfSections
+        trackerViewModel.numberOfSections
     }
     
     func collectionView(
@@ -248,7 +318,7 @@ extension TrackersViewController: UICollectionViewDataSource {
                 withReuseIdentifier: reuseIdentifier,
                 for: indexPath
             ) as? TrackerCollectionCell,
-            let tracker = trackerManager.tracker(at: indexPath)
+            let tracker = trackerViewModel.tracker(at: indexPath)
         else {
             return UICollectionViewCell()
         }
@@ -262,6 +332,60 @@ extension TrackersViewController: UICollectionViewDataSource {
 
 // MARK: - Extensions + TrackersViewController -> TrackerCollectionCellDelegate Conformnace
 extension TrackersViewController: TrackerCollectionCellDelegate {
+    func isTrackerPinned(uuid: UUID) -> Bool {
+        false
+        // TODO: - implement tracker isPinned Getter
+    }
+    
+    func pinTracker(at indexPath: IndexPath?) {
+        // TODO: - implement tracker pin
+    }
+    
+    func unpinTracker(at indexPath: IndexPath?) {
+        // TODO: - implement tracker unpin
+    }
+    
+    func editTracker(at indexPath: IndexPath?) {
+        guard
+            let indexPath,
+            let tracker = trackerViewModel.tracker(at: indexPath),
+            let entity = trackerViewModel.trackerEntity(by: tracker.id),
+            let title = entity.title,
+            let emoji = entity.emoji,
+            let hexColor = entity.hexColor,
+            let color = UIColor(hex: hexColor),
+            let categoryName = entity.category?.name
+        else { return }
+        
+        let viewModel = TrackerCreationViewModel(
+            model:
+                .init(
+                    id: tracker.id,
+                    title: title,
+                    emoji: emoji,
+                    color: color,
+                    categoryName: categoryName,
+                    schedule: tracker.schedule
+                )
+        )
+        
+        let viewController = TrackerCreationOptionsViewController(
+            viewModel: viewModel,
+            isForEdit: true
+        )
+        viewController.navigationItem.hidesBackButton = true
+        viewController.isIrregularEvent = tracker.schedule.isEmpty
+        
+        let navigationController = UINavigationController(rootViewController: viewController)
+        navigationController.modalPresentationStyle = .formSheet
+        present(navigationController, animated: true)
+    }
+    
+    func tryDeleteTracker(at indexPath: IndexPath?) {
+        guard let indexPath else { return }
+        clarifyTrackerDeletion(at: indexPath)
+    }
+    
     func dateIsLessThanTodayDate() -> Bool {
         let calendar = Calendar.current
         return calendar.startOfDay(for: Date()) >= calendar.startOfDay(for: self.currentDate)
@@ -271,7 +395,7 @@ extension TrackersViewController: TrackerCollectionCellDelegate {
         for uuid: UUID,
         updateWith indexPath: IndexPath
     ) {
-        trackerManager.toggleTrackerRecord(
+        trackerRecordViewModel.toggleTrackerRecord(
             record:
                 .init(
                     trackerId: uuid,
@@ -282,11 +406,11 @@ extension TrackersViewController: TrackerCollectionCellDelegate {
     }
     
     func trackerRecordsCount(for uuid: UUID) -> Int {
-        trackerManager.countTrackerRecords(for: uuid)
+        trackerRecordViewModel.countTrackerRecords(for: uuid)
     }
     
     func isTrackerCompletedToday(uuid: UUID) -> Bool {
-        trackerManager.isTrackerCompleteToday(
+        trackerRecordViewModel.isTrackerCompleteToday(
             record:
                 .init(
                     trackerId: uuid,
@@ -309,7 +433,7 @@ private extension TrackersViewController {
         habitsCollectionViewConstraintsActivate()
         noContentPlaceholderViewConstraintsActivate()
         
-        reloadNoContentPlaceholderView(with: .noCategoriesFound)
+        reloadNoContentPlaceholderView(with: .noSearchResults)
     }
 }
 
@@ -323,7 +447,7 @@ extension TrackersViewController: DebouncedSearchControllerDelegate {
     
     func filterOptionsChangedHandler() {
         let trackerTitleFilter = navigationItem.searchController?.searchBar.text
-        trackerManager.updateFilterPredicate(
+        trackerViewModel.updateFilterPredicate(
             trackerTitleFilter: trackerTitleFilter,
             dateFilter: currentDate
         )

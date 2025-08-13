@@ -74,14 +74,16 @@ extension TrackerButton {
     
     func activateConstraints(
         view: UIView,
-        position: Position
+        position: Position,
+        constant: CGFloat? = nil
     ) {
         NSLayoutConstraint.activate([
             heightAnchor.constraint(
                 equalToConstant: ViewsHeightConstant.buttonHeight.rawValue
             ),
             bottomAnchor.constraint(
-                equalTo: view.safeAreaLayoutGuide.bottomAnchor
+                equalTo: view.safeAreaLayoutGuide.bottomAnchor,
+                constant: constant ?? 0
             )
         ])
         
