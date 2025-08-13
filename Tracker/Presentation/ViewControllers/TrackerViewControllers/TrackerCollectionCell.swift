@@ -52,6 +52,10 @@ final class TrackerCollectionCell: UICollectionViewCell {
             configurePlusButton()
         }
     }
+    private var isPinned: Bool? {
+        guard let tracker else { return nil }
+        return delegate?.isTrackerPinned(uuid: tracker.id)
+    }
     
     // MARK: - Internal Properties
     var indexPath: IndexPath?
@@ -62,10 +66,91 @@ final class TrackerCollectionCell: UICollectionViewCell {
         super.init(frame: frame)
         
         setupViews()
+        addContextMenuInteraction()
     }
     
     required init?(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
+    }
+}
+
+extension TrackerCollectionCell: UIContextMenuInteractionDelegate {
+    func contextMenuInteraction(
+        _ interaction: UIContextMenuInteraction,
+        configurationForMenuAtLocation location: CGPoint
+    ) -> UIContextMenuConfiguration? {
+        
+        guard let isPinned else { return nil }
+        
+        let configuration = UIContextMenuConfiguration(identifier: nil, previewProvider: nil) { _ in
+            UIMenu(children: [
+                UIAction(title: isPinned ? "Открепить" : "Закрепить") { [weak self] _ in
+                    guard let self else { return }
+                    if isPinned {
+                        delegate?.unpinTracker(at: indexPath)
+                    } else {
+                        delegate?.pinTracker(at: indexPath)
+                    }
+                },
+                UIAction(title: "Редактировать") { [weak self] _ in
+                    guard let self else { return }
+                    delegate?.editTracker(at: indexPath)
+                },
+                UIAction(title: "Удалить", attributes: [.destructive]) { [weak self] _ in
+                    guard let self else { return }
+                    delegate?.tryDeleteTracker(at: indexPath)
+                },
+            ])
+        }
+        
+        return configuration
+    }
+    
+    func contextMenuInteraction(
+        _ interaction: UIContextMenuInteraction,
+        previewForDismissingMenuWithConfiguration configuration: UIContextMenuConfiguration
+    ) -> UITargetedPreview? {
+        let params = UIPreviewParameters()
+        params.backgroundColor = .clear
+        
+        return UITargetedPreview(view: coloredRectangeContainerView, parameters: params)
+    }
+    func contextMenuInteraction(
+        _ interaction: UIContextMenuInteraction,
+        previewForHighlightingMenuWithConfiguration configuration: UIContextMenuConfiguration
+    ) -> UITargetedPreview? {
+        let params = UIPreviewParameters()
+        params.backgroundColor = .clear
+        
+        return UITargetedPreview(view: coloredRectangeContainerView, parameters: params)
+    }
+}
+
+// MARK: - Extensions + Private TrackerCollectionCell Helpers
+private extension TrackerCollectionCell {
+    func addContextMenuInteraction() {
+        let interaction = UIContextMenuInteraction(delegate: self)
+        addInteraction(interaction)
+    }
+    
+    func getDayDeclension() -> String {
+        let daysCount = daysCheckedCount ?? 0
+        let absCount = abs(daysCount) % 100
+        let lastDigit = absCount % 10
+        
+        switch daysCount {
+        case 11, 12, 13, 14:
+            return "дней"
+        default:
+            switch lastDigit {
+            case 1:
+                return "день"
+            case 2, 3, 4:
+                return "дня"
+            default:
+                return "дней"
+            }
+        }
     }
 }
 
@@ -320,28 +405,5 @@ private extension TrackerCollectionCell {
                 constant: -12
             )
         ])
-    }
-}
-
-// MARK: - Extensions + Private TrackerCollectionCell Helpers
-private extension TrackerCollectionCell {
-    func getDayDeclension() -> String {
-        let daysCount = daysCheckedCount ?? 0
-        let absCount = abs(daysCount) % 100
-        let lastDigit = absCount % 10
-        
-        switch daysCount {
-        case 11, 12, 13, 14:
-            return "дней"
-        default:
-            switch lastDigit {
-            case 1:
-                return "день"
-            case 2, 3, 4:
-                return "дня"
-            default:
-                return "дней"
-            }
-        }
     }
 }

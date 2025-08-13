@@ -18,7 +18,7 @@ final class CategoryCreationViewController: UIViewController {
     private var buttonsBottomConsraint: NSLayoutConstraint?
     
     // MARK: - Private Constants
-    private let trackerManager = TrackerManager.shared
+    private let viewModel = TrackerManager.shared.categoryViewModel
     private let maximumTextLength: Int = 38
     
     // MARK: - Internal Properties
@@ -37,6 +37,22 @@ final class CategoryCreationViewController: UIViewController {
             }
         }
         setupViews()
+        handleViewModelsEvents()
+    }
+}
+
+// MARK: - Extensions + Priavate CategoryCreationViewController ViewModel Events Handling
+private extension CategoryCreationViewController {
+    func handleViewModelsEvents() {
+        viewModel.onError = { [weak self] error in
+            guard let _ = self else { return }
+            print("An error occured: \(error)")
+        }
+        
+        viewModel.onCategoriesChanged = { [weak self] in
+            guard let _ = self else { return }
+            print(#file, #function, "Categories changed")
+        }
     }
 }
 
@@ -48,12 +64,12 @@ private extension CategoryCreationViewController {
         else { return }
         
         if let categoryIndexPath {
-            trackerManager.editCategory(
+            viewModel.editCategory(
                 at: categoryIndexPath,
                 name: text
             )
         } else {
-            trackerManager.addNewCategory(name: text)
+            viewModel.addNewCategory(name: text)
         }
 
         navigationController?.popViewController(animated: true)
@@ -90,7 +106,7 @@ extension CategoryCreationViewController: UITextFieldDelegate {
         )
         
         let isOverLimit = updatedText.count > maximumTextLength
-        let alreadyExists = trackerManager.isCategoryNameExist(updatedText)
+        let alreadyExists = viewModel.isCategoryNameExist(updatedText)
         
         if updatedText.isEmpty || (!updatedText.isEmpty && alreadyExists) {
             confirmButton.makeInactive()
@@ -151,7 +167,7 @@ private extension CategoryCreationViewController {
         textField.layer.zPosition = 1
         
         guard let categoryIndexPath else { return }
-        let entity = trackerManager.fetchCategoryEntity(at: categoryIndexPath)
+        let entity = viewModel.fetchCategoryEntity(at: categoryIndexPath)
         textField.text = entity.name
     }
     

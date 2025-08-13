@@ -17,13 +17,15 @@ final class ScheduleOptionsCell: UITableViewCell {
     static let reuseIdentifier = "NewHabitCreationScheduleOptionsCell"
     
     // MARK: - Internal Properties
-    var weekdayOption: (weekday: Weekday, isChoosen: Bool)? {
+    var weekday: Weekday? {
         didSet {
-            titleLabel.text = weekdayOption?.weekday.fullName
-            switchView.isOn = weekdayOption?.isChoosen ?? false
+            titleLabel.text = weekday?.fullName
+            switchView.isOn = isOn ?? false
         }
     }
+    var isOn: Bool?
     var didSelectWeekday: ((Weekday?) -> Void)?
+    var didDeselectWeekday: ((Weekday?) -> Void)?
     var isLastItem: Bool? {
         didSet {
             separator.isHidden = isLastItem ?? true
@@ -41,7 +43,11 @@ final class ScheduleOptionsCell: UITableViewCell {
 // MARK: - Extensions + Private ScheduleOptionsCell Actions Handlers
 private extension ScheduleOptionsCell {
     @objc func switchValueDidChange() {
-        didSelectWeekday?(weekdayOption?.weekday)
+        if let isOn, isOn {
+            didDeselectWeekday?(weekday)
+        } else {
+            didSelectWeekday?(weekday)
+        }
     }
 }
 

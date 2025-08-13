@@ -10,14 +10,19 @@ final class ScheduleViewController: UIViewController {
         .init()
     }()
     
-    // MARK: - Private Constants
-    private let optionsManager = TrackerManager.shared
+    // MARK: - Private Properties
+    private(set) var weekdays = [Weekday]()
     
     // MARK: - View Life Cycles
     override func viewDidLoad() {
         super.viewDidLoad()
         
         setUpViews()
+    }
+    
+    func setWeekdays(_ weekdays: [Weekday]?) {
+        self.weekdays = weekdays ?? []
+        tableView.reloadData()
     }
 }
 
@@ -26,18 +31,23 @@ private extension ScheduleViewController {
     @objc func didTapConfirmButton() {
         NotificationCenter.default.post(
             name: .scheduleDidChangedNotification,
-            object: self
+            object: self,
+            userInfo: ["schedule": weekdays]
         )
+        
         navigationController?.popViewController(animated: true)
     }
     
     func didSelectWeekday(weekday: Weekday?) {
-        guard
-            let weekday,
-            let index = optionsManager.weekdays.firstIndex(where: {$0.weekday == weekday})
-        else { return }
-        
-        optionsManager.weekdays[index].isChoosen.toggle()
+        guard let weekday else { return }
+        weekdays.append(weekday)
+        tableView.reloadData()
+    }
+    
+    func didDeselectWeekday(weekday: Weekday?) {
+        guard let weekday else { return }
+        weekdays.removeAll { $0 == weekday }
+        tableView.reloadData()
     }
 }
 
@@ -65,8 +75,12 @@ extension ScheduleViewController: UITableViewDataSource {
             return UITableViewCell()
         }
         
-        cell.weekdayOption = optionsManager.weekdays[indexPath.row]
+        if let weekday = Weekday.allCases[safe: indexPath.row] {
+            cell.isOn = weekdays.contains(weekday)
+            cell.weekday = weekday
+        }
         cell.didSelectWeekday = didSelectWeekday
+        cell.didDeselectWeekday = didDeselectWeekday
         cell.isLastItem = indexPath.row == Weekday.allCases.count - 1
         
         return cell

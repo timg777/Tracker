@@ -38,7 +38,7 @@ private extension TrackerCreationViewController {
     }
     
     func routeToTrackerCreationOptions(isIrregularEvent: Bool) {
-        let viewController = TrackerCreationOptionsViewController()
+        let viewController = TrackerCreationOptionsViewController(isForEdit: false)
         viewController.navigationItem.hidesBackButton = true
         viewController.isIrregularEvent = isIrregularEvent
         navigationController?.pushViewController(viewController, animated: true)

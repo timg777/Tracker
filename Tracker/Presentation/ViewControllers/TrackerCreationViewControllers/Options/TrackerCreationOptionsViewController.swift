@@ -44,7 +44,8 @@ final class TrackerCreationOptionsViewController: UIViewController {
     }()
     
     // MARK: - Private Constants
-    private let trackerManager = TrackerManager.shared
+    private let trackerCreationViewModel: TrackerCreationViewModel
+    private let trackerViewModel = TrackerManager.shared.trackerViewModel
     
     // MARK: - Private Propetries
     private var warningBottomConstraint: NSLayoutConstraint?
@@ -54,14 +55,12 @@ final class TrackerCreationOptionsViewController: UIViewController {
             destinationController: CategoryViewController.self
         )
     ]
+    private let isForEdit: Bool
     
     // MARK: - Internal Properties
     var isIrregularEvent: Bool? {
         didSet {
-            guard
-                let isIrregularEvent,
-                !isIrregularEvent
-            else { return }
+            guard let isIrregularEvent, !isIrregularEvent else { return }
             screenItems.append(
                 .init(
                     name: .schedule,
@@ -77,6 +76,7 @@ final class TrackerCreationOptionsViewController: UIViewController {
      
         addObservers()
         setUpViews()
+        handleViewModelsEvents()
     }
     
     override func viewDidLayoutSubviews() {
@@ -91,12 +91,172 @@ final class TrackerCreationOptionsViewController: UIViewController {
         
         containerView.layoutIfNeeded()
         scrollViewContainer.contentSize = containerView.bounds.size
+        
+        setUpViewsForEditingIfNeeded()
+    }
+    
+    // MARK: - Internal Initialization
+    init(
+        viewModel: TrackerCreationViewModel = .init(),
+        isForEdit: Bool
+    ) {
+        self.trackerCreationViewModel = viewModel
+        self.isForEdit = isForEdit
+        super.init(nibName: nil, bundle: nil)
+    }
+    
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
     }
     
     deinit {
         NotificationCenter.default.removeObserver(self)
     }
 }
+
+// MARK: - Extensions + TrackerCreationOptionsViewController ViewModels Events Handler
+private extension TrackerCreationOptionsViewController {
+    func handleViewModelsEvents() {
+        trackerViewModel.onTrackersChanged = { [weak self] in
+            guard let self else { return }
+            NotificationCenter.default.post(
+                name: .categoriesDidChangedNotification,
+                object: nil
+            )
+            dismiss(animated: true)
+        }
+        trackerViewModel.onError = { [weak self] error in
+            guard let _ = self else { return }
+            print("An error occurred: \(error)")
+        }
+    }
+    
+    func setUpViewsForEditingIfNeeded() {
+        guard isForEdit else { return }
+        
+        guard
+            let emoji = trackerCreationViewModel.emoji,
+            let color = trackerCreationViewModel.color,
+            let title = trackerCreationViewModel.title
+        else { return }
+        
+//        textField.text = title
+        
+        guard
+            let emojiIndex =
+                TrackerCreationCollectionOptionCell
+                .emojies
+                .firstIndex(of: emoji),
+            let colorIndex =
+                TrackerCreationCollectionOptionCell
+                .colors
+                .compactMap({$0.toHexString()})
+                .compactMap({ UIColor(hex: $0) })
+                .firstIndex(of: color)
+        else { return }
+        
+        let emojiIndexPath = IndexPath(item: emojiIndex, section: 0)
+        let colorIndexPath = IndexPath(item: colorIndex, section: 1)
+        
+        optionsCollectionView.selectItem(
+            at: emojiIndexPath,
+            animated: true,
+            scrollPosition: .top
+        )
+        optionsCollectionView.selectItem(
+            at: colorIndexPath,
+            animated: true,
+            scrollPosition: .top
+        )
+    }
+}
+
+// MARK: - Extensions + Private TrackerCreationOptionsViewController Helpers
+private extension TrackerCreationOptionsViewController {
+    func checkForAllOptionFieldsAreCompleted(newTextValue text: String = "DEFAULT") {
+        let text = text == "DEFAULT" ? textField.text ?? "" : text
+        let isTrackerNameValid = isTrackerNameValid(text)
+        let isButtonEnabled = (hasAtLeastOneDaySelected || (isIrregularEvent ?? false)) && isTrackerNameValid && trackerOptionsSelected
+        
+        UIView.animate(withDuration: 0.2) { [weak self] in
+            guard let self else { return }
+            confirmButton.layer.opacity = isButtonEnabled ? 1 : 0.4
+            confirmButton.isEnabled = isButtonEnabled
+        }
+    }
+    
+    func isTrackerNameValid(_ name: String) -> Bool {
+        name.count > 0
+    }
+    
+    var hasAtLeastOneDaySelected: Bool {
+        trackerCreationViewModel.hasAtLeastOneDaySelected
+    }
+    
+    var trackerOptionsSelected: Bool {
+        optionsCollectionView.indexPathsForSelectedItems?.count ?? 0 == 2
+    }
+    
+    func addObservers() {
+        NotificationCenter.default.addObserver(
+            forName: .scheduleDidChangedNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] notification in
+            
+            guard
+                let self,
+                let row = screenItems.firstIndex(where: { $0.name == .schedule }),
+                let schedule = notification.userInfo?["schedule"] as? [Weekday]
+            else {
+                print("Failed to handle scheduleDidChangedNotification notification, userInfo: \(String(describing: notification.userInfo))")
+                return
+            }
+            
+            if
+                let cell = tableView.cellForRow(
+                    at: .init(
+                        row: row,
+                        section: 0
+                    )
+                ) as? DisclosureOptionTableCell
+            {
+                trackerCreationViewModel.setSchedule(schedule)
+                cell.selectedOptions = trackerCreationViewModel.convertScheduleToString()
+                
+                checkForAllOptionFieldsAreCompleted()
+            }
+        }
+        
+        NotificationCenter.default.addObserver(
+            forName: .categoryDidChangedNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] notification in
+            guard
+                let self,
+                let row = screenItems.firstIndex(where: { $0.name == .category }),
+                let categoryName = notification.userInfo?["categoryName"] as? String
+            else {
+                print("Failed to handle categoryDidChangedNotification notification, userInfo: \(String(describing: notification.userInfo))")
+                return
+            }
+            if
+                let cell = tableView.cellForRow(
+                    at: .init(
+                        row: row,
+                        section: 0
+                    )
+                ) as? DisclosureOptionTableCell
+            {
+                cell.selectedOptions = categoryName
+                trackerCreationViewModel.setCategoryName(categoryName)
+                checkForAllOptionFieldsAreCompleted()
+            }
+        }
+    }
+}
+
 
 // MARK: - Extensions + Private TrackerCreationOptionsViewController -> UITextFieldDelegate Conformance
 extension TrackerCreationOptionsViewController: UITextFieldDelegate {
@@ -157,32 +317,33 @@ private extension TrackerCreationOptionsViewController {
             let emojiIndexPath = collectionSelectionIndicies.first(where: { $0.section == 0 }),
             let colorIndexPath = collectionSelectionIndicies.first(where: { $0.section == 1 }),
             let emoji = TrackerCreationCollectionOptionCell.emojies[safe: emojiIndexPath.item],
-            let color = TrackerCreationCollectionOptionCell.colors[safe: colorIndexPath.item]
-        else { return }
-        
-        guard
+            let color = TrackerCreationCollectionOptionCell.colors[safe: colorIndexPath.item],
             let title = textField.text
         else { return }
-        let schedule = trackerManager.weekdays.filter { $0.isChoosen }.map( \.weekday )
         
-        trackerManager.addNewTracker(
-            .init(
-                id: .init(),
-                title: title,
-                emoji: emoji,
-                color: color,
-                schedule: schedule
-            ),
-            to: trackerManager.choosenCategory ?? GlobalConstants.defaultCategoryName
-        )
+        trackerCreationViewModel.setColor(color)
+        trackerCreationViewModel.setEmoji(emoji)
+        trackerCreationViewModel.setTitle(title)
+
+        guard let (trackerModel, categoryName) = trackerCreationViewModel.trackerModel else {
+            print("Failed to create an instance of TrackerModel")
+            return
+        }
         
-        trackerManager.choosenCategory = nil
-        
-        dismiss(animated: true)
+        if isForEdit {
+            trackerViewModel.editTracker(
+                new: trackerModel,
+                newCategoryName: categoryName
+            )
+        } else {
+            trackerViewModel.addNewTracker(
+                trackerModel,
+                to: categoryName
+            )
+        }
     }
     
     @objc func didTapCancelButton() {
-        trackerManager.choosenCategory = nil
         dismiss(animated: true)
     }
 }
@@ -198,11 +359,17 @@ extension TrackerCreationOptionsViewController: UITableViewDelegate {
             animated: true
         )
         
+        // MARK: - Creation & Pushing new ViewController
         guard
             let screenItem = screenItems[safe: indexPath.row]
         else { return }
-        let viewController = screenItem.destinationController.init()
+        
+        let viewController: UIViewController
+        
+        viewController = screenItem.destinationController.init()
         viewController.navigationItem.hidesBackButton = true
+        
+        (viewController as? ScheduleViewController)?.setWeekdays(trackerCreationViewModel.weekdays)
         
         navigationController?.pushViewController(viewController, animated: true)
     }
@@ -246,7 +413,7 @@ extension TrackerCreationOptionsViewController: UITableViewDataSource {
         cell.accessoryType = .disclosureIndicator
 
         if
-            let selectedOptions = trackerManager.selectedOptions(for: screenItem.name)
+            let selectedOptions = trackerCreationViewModel.selectedOptions(for: screenItem.name)
         {
             cell.selectedOptions = selectedOptions
         }
@@ -460,9 +627,18 @@ private extension TrackerCreationOptionsViewController {
     }
     
     func configureTitleLabel() {
+        let text: String
+        if isForEdit {
+            text = "Редактирование привычки"
+        } else if isIrregularEvent ?? false {
+            text = "Новое нерегулярное событие"
+        } else {
+            text = "Новая привычка"
+        }
+        
         titleLabel.attributedText =
         NSAttributedString(
-            string: (isIrregularEvent ?? false) ? "Новое нерегулярное событие" : "Новая привычка",
+            string: text,
             attributes: [
                 .font: UIFont.ypMedium16,
                 .foregroundColor: UIColor.ypBlack
@@ -476,7 +652,13 @@ private extension TrackerCreationOptionsViewController {
     }
     
     func configureConfirmButton() {
-        confirmButton.title = "Создать"
+        let buttonName: String
+        if isForEdit {
+            buttonName = "Сохранить"
+        } else {
+            buttonName = "Создать"
+        }
+        confirmButton.title = buttonName
         confirmButton.isEnabled = false
         confirmButton.layer.opacity = 0.4
         confirmButton.addTarget(
@@ -666,83 +848,3 @@ private extension TrackerCreationOptionsViewController {
         ])
     }
 }
-
-// MARK: - Extensions + Private TrackerCreationOptionsViewController Helpers
-private extension TrackerCreationOptionsViewController {
-    func checkForAllOptionFieldsAreCompleted(newTextValue text: String = "DEFAULT") {
-        let text = text == "DEFAULT" ? textField.text ?? "" : text
-        
-        let isTrackerNameValid = isTrackerNameValid(text)
-        let isButtonEnabled = (hasAtLeastOneDaySelected || (isIrregularEvent ?? false)) && isTrackerNameValid && trackerOptionsSelected
-        
-        UIView.animate(withDuration: 0.2) { [weak self] in
-            guard let self else { return }
-            confirmButton.layer.opacity = isButtonEnabled ? 1 : 0.4
-            confirmButton.isEnabled = isButtonEnabled
-        }
-    }
-    
-    func isTrackerNameValid(_ name: String) -> Bool {
-        name.count > 0
-    }
-    
-    var hasAtLeastOneDaySelected: Bool {
-        trackerManager.weekdays.contains(where: { $0.isChoosen })
-    }
-    
-    var trackerOptionsSelected: Bool {
-        optionsCollectionView.indexPathsForSelectedItems?.count ?? 0 == 2
-    }
-    
-    func addObservers() {
-        NotificationCenter.default.addObserver(
-            forName: .scheduleDidChangedNotification,
-            object: nil,
-            queue: .main
-        ) { [weak self] _ in
-            
-            guard
-                let self,
-                let row = screenItems.firstIndex(where: { $0.name == .schedule })
-            else { return }
-            
-            let schedule = trackerManager.convertScheduleToString()
-            
-            if
-                let cell = tableView.cellForRow(
-                    at: .init(
-                        row: row,
-                        section: 0
-                    )
-                ) as? DisclosureOptionTableCell
-            {
-                cell.selectedOptions = schedule
-                checkForAllOptionFieldsAreCompleted()
-            }
-        }
-        
-        NotificationCenter.default.addObserver(
-            forName: .categoryDidChangedNotification,
-            object: nil,
-            queue: .main
-        ) { [weak self] _ in
-            guard
-                let self,
-                let row = screenItems.firstIndex(where: { $0.name == .category }),
-                let category = trackerManager.choosenCategory
-            else { return }
-            if
-                let cell = tableView.cellForRow(
-                    at: .init(
-                        row: row,
-                        section: 0
-                    )
-                ) as? DisclosureOptionTableCell
-            {
-                cell.selectedOptions = category
-                checkForAllOptionFieldsAreCompleted()
-            }
-        }
-    }
-}
-

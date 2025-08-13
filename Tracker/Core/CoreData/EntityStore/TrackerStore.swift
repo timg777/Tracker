@@ -41,31 +41,58 @@ final class TrackerStore: NSObject {
     
     // MARK: - Internal Properties
     weak var delegate: TrackerStoreDelegate?
+    var createDefaultCategory: (() -> Void)?
     
     // MARK: - Initialization
-    init(context: NSManagedObjectContext = CoreDataManager.shared.context) {
+    init(context: NSManagedObjectContext) {
         self.context = context
+        controller
     }
 }
 
 // MARK: - Extensions + Internal TrackerStore Data Managing
 extension TrackerStore {
-    func addNewTracker(_ tracker: TrackerModel, to categoryName: String) throws {
-        let trackerEntity = TrackerEntity(context: context)
-        trackerEntity.update(with: tracker)
-        
-        if let categoryEntity = try findCategory(named: categoryName) {
-            trackerEntity.category = categoryEntity
-        }
-        
+    func saveContext() throws {
+        guard context.hasChanges else { return }
         try context.save()
         performFetchResults()
     }
     
+    func addNewTracker(_ tracker: TrackerModel, to categoryName: String) throws {
+        guard let categoryEntity = try findCategory(named: categoryName) else {
+            createDefaultCategory?()
+            return try addNewTracker(tracker, to: categoryName)
+        }
+        
+        let trackerEntity = TrackerEntity(context: context)
+        trackerEntity.update(with: tracker)
+        trackerEntity.category = categoryEntity
+        
+        try saveContext()
+    }
+    
+    func editTracker(new tracker: TrackerModel, newCategoryName: String) throws {
+        let uuid = tracker.id
+
+        guard let trackerEntity = try trackerEntity(by: uuid) else {
+            print("Failed to find tracker with UUID: \(uuid)")
+            return
+        }
+        
+        guard let categoryEntity = try findCategory(named: newCategoryName) else {
+            print("Failed to find category with name: \(newCategoryName)")
+            return
+        }
+        
+        trackerEntity.update(with: tracker)
+        trackerEntity.category = categoryEntity
+
+        try saveContext()
+    }
+    
     func deleteTracker(_ entity: TrackerEntity) throws {
         context.delete(entity)
-        try context.save()
-        performFetchResults()
+        try saveContext()
     }
     
     func deleteTracker(at indexPath: IndexPath) throws {
