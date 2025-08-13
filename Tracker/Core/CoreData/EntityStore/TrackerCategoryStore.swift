@@ -39,7 +39,6 @@ final class TrackerCategoryStore: NSObject {
     
     init(context: NSManagedObjectContext) {
         self.context = context
-        controller
     }
 }
 

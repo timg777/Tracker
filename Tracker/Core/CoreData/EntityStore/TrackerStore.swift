@@ -46,7 +46,6 @@ final class TrackerStore: NSObject {
     // MARK: - Initialization
     init(context: NSManagedObjectContext) {
         self.context = context
-        controller
     }
 }
 
