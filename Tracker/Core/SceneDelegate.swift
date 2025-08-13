@@ -15,10 +15,19 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         
         window = UIWindow(windowScene: scene)
         
-        let rootViewController =
-        UserDefaultsService.shared.isOnboardingCompleted ?
-        TabBarController() :
-        OnboardingViewController()
+        let rootViewController: UIViewController
+        
+        if UserDefaultsService.shared.isOnboardingCompleted {
+            rootViewController = TabBarController()
+        } else {
+            let vc = OnboardingViewController()
+            vc.didTapOnboardingSkipButton = { [weak self] in
+                guard let self else { return }
+                UserDefaultsService.shared.isOnboardingCompleted = true
+                window?.rootViewController = TabBarController()
+            }
+            rootViewController = vc
+        }
         
         window?.rootViewController = rootViewController
         window?.makeKeyAndVisible()

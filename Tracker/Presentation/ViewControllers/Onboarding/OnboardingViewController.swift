@@ -5,8 +5,8 @@ final class OnboardingViewController: UIPageViewController {
     // MARK: - Private Views
     lazy var pages: [UIViewController] = {
         [
-            OnboardingPageViewController(currentPage: .first),
-            OnboardingPageViewController(currentPage: .second)
+            OnboardingPageViewController(currentPage: .aboutTracker),
+            OnboardingPageViewController(currentPage: .aboutWaterAndYoga)
         ]
     }()
     
@@ -20,6 +20,9 @@ final class OnboardingViewController: UIPageViewController {
     
     // MARK: - Private Properties
     private var isTransitionInProgress = false
+    
+    // MARK: - Internal Properties
+    var didTapOnboardingSkipButton: (() -> Void)?
     
     // MARK: - View Life Cycles
     override func viewDidLoad() {
@@ -49,16 +52,7 @@ final class OnboardingViewController: UIPageViewController {
 // MARK: - Extensions + Private OnboardingViewController skipButton Action Handler
 private extension OnboardingViewController {
     @objc func skipButtonTapped() {
-        UserDefaultsService.shared.isOnboardingCompleted = true
-        
-        guard
-            let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
-            let window = windowScene.windows.first
-        else {
-            print(#function, "Couldn't find window scene.")
-            return
-        }
-        window.rootViewController = TabBarController()
+        didTapOnboardingSkipButton?()
     }
 }
 

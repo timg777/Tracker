@@ -1,22 +1,22 @@
-import DeveloperToolsSupport
+import UIKit
 
 enum OnboardingPage: UInt8 {
-    case first, second
+    case aboutTracker, aboutWaterAndYoga
     
     var title: String {
         switch self {
-        case .first:
+        case .aboutTracker:
             "Отслеживайте только то, что хотите"
-        case .second:
+        case .aboutWaterAndYoga:
             "Даже если это не литры воды и йога"
         }
     }
     
     var backgroundImageReource: ImageResource {
         switch self {
-        case .first:
+        case .aboutTracker:
             .onboardingBackgrounFirst
-        case .second:
+        case .aboutWaterAndYoga:
             .onboardingBackgrounSecond
         }
     }
