@@ -25,6 +25,7 @@ final class TrackerManager {
         trackerStore.createDefaultCategory = { [weak self] in
             self?.createDefaultCategoryIfNeeded()
         }
+        
         createDefaultCategoryIfNeeded()
     }
 }
@@ -32,11 +33,12 @@ final class TrackerManager {
 // MARK: - Extensions + Private TrackerManager Helpers
 private extension TrackerManager {
     func createDefaultCategoryIfNeeded() {
-        guard !categoryViewModel.isCategoryNameExist(
-            GlobalConstants.defaultCategoryName
-        ) else { return }
+        let categoryName = GlobalConstants.defaultCategoryName
+        
+        guard !categoryViewModel.isCategoryNameExist(categoryName) else { return }
+        
         categoryViewModel.addNewCategory(
-            name: GlobalConstants.defaultCategoryName
+            name: categoryName
         )
     }
 }

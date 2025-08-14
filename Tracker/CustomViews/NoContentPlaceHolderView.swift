@@ -41,11 +41,14 @@ final class NoContentPlaceHolderView {
     var type: NoContentType? {
         didSet {
             switch type {
+            case .noStat:
+                title = LocalizationManager.shared.localizedString(for: .noContentPlaceholder(.noStatisticsFound))
+                image = UIImage(resource: .noStat)
             case .noSearchResults:
-                title = "Ничего не найдено"
+                title = LocalizationManager.shared.localizedString(for: .noContentPlaceholder(.noSearchResults))
                 image = UIImage(resource: .notFound)
             case .noCategoriesFound:
-                title = "Что будем отслеживать?"
+                title = LocalizationManager.shared.localizedString(for: .noContentPlaceholder(.noCategoriesInTrackersFound))
                 image = UIImage(resource: .noStat)
             case .none:
                 title = nil

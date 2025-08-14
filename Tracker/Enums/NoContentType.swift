@@ -1,3 +1,3 @@
 enum NoContentType {
-    case noSearchResults, noCategoriesFound
+    case noSearchResults, noCategoriesFound, noStat
 }

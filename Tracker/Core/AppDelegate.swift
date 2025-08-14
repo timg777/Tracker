@@ -1,4 +1,5 @@
 import UIKit
+import YandexMobileMetrica
 
 @main
 class AppDelegate: UIResponder, UIApplicationDelegate {
@@ -7,6 +8,10 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         _ application: UIApplication,
         didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
     ) -> Bool {
+        if let configuration = YMMYandexMetricaConfiguration(apiKey: "c9d0f78f-895b-43b7-a241-c3c8e21f8c06") {
+            YMMYandexMetrica.activate(with: configuration)
+        }
+        
         return true
     }
 

@@ -26,6 +26,10 @@ final class TrackerCreationViewController: UIViewController {
         
         setUpViews()
     }
+    
+    private func localizedTitle(for uiElement: LocalizationManager.UIElement.TrackerCreation) -> String {
+        LocalizationManager.shared.localizedString(using: uiElement.rawValue)
+    }
 }
 
 // MARK: - Extensions + Private TrackerCreationViewController Buttons Actions Handlers
@@ -68,7 +72,7 @@ private extension TrackerCreationViewController {
     func configureTitleLabel() {
         titleLabel.attributedText =
         NSAttributedString(
-            string: "Создание трекера",
+            string: localizedTitle(for: .navigationTitle),
             attributes: [
                 .font: UIFont.ypMedium16,
                 .foregroundColor: UIColor.ypBlack
@@ -81,14 +85,14 @@ private extension TrackerCreationViewController {
     }
     
     func configureButtons() {
-        habitButton.title = "Привычка"
+        habitButton.title = localizedTitle(for: .habitButton)
         habitButton.addTarget(
             self,
             action: #selector(didTapHabitButton),
             for: .touchUpInside
         )
         
-        irregularEventButton.title = "Нерегулярное событие"
+        irregularEventButton.title = localizedTitle(for: .irregularButton)
         irregularEventButton.addTarget(
             self,
             action: #selector(didTapIrregularEventButton),

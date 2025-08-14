@@ -3,11 +3,8 @@ import UIKit
 final class CategoryViewController: UIViewController {
     
     // MARK: - Private Views
-    private lazy var categoriesTableView: UITableView = {
-        .init(
-            frame: .zero,
-            style: .insetGrouped
-        )
+    private lazy var categoriesTableView: TrackerTableView = {
+        .init()
     }()
     private lazy var addNewCategoryButton: TrackerButton = {
         .init()
@@ -31,6 +28,13 @@ final class CategoryViewController: UIViewController {
         categoriesTableView.reloadData()
 
         reloadNoContentPlaceholderView()
+    }
+    
+    private func localizedTitle(for uiElement: LocalizationManager.UIElement.Category) -> String {
+        LocalizationManager.shared.localizedString(using: uiElement.rawValue)
+    }
+    private func localizedTitle(for shared: LocalizationManager.UIElement.Shared) -> String {
+        LocalizationManager.shared.localizedString(using: shared.rawValue)
     }
 }
 
@@ -72,13 +76,13 @@ private extension CategoryViewController {
     
     func clarifyCategoryDeletion(at indexPath: IndexPath) {
         let alert = UIAlertController(
-            title: "Эта категория точно не нужна?",
+            title: localizedTitle(for: .alert),
             message: nil,
             preferredStyle: .actionSheet
         )
         alert.addAction(
             .init(
-                title: "Отменить",
+                title: localizedTitle(for: .cancel),
                 style: .cancel,
                 handler: { [weak self] _ in
                     guard let _ = self else { return }
@@ -88,7 +92,7 @@ private extension CategoryViewController {
         )
         alert.addAction(
             .init(
-                title: "Удалить",
+                title: localizedTitle(for: .remove),
                 style: .destructive,
                 handler: { [weak self] _ in
                     self?.removeCategory(at: indexPath)
@@ -157,12 +161,18 @@ extension CategoryViewController: UITableViewDelegate {
     ) -> UIContextMenuConfiguration? {
         guard viewModel.categoriesCount > 0 else { return nil }
         
-        return .init(actionProvider: { actions in
+        return .init(actionProvider: { [weak self] actions in
+            guard let self else { return nil }
             return UIMenu(children: [
-                UIAction(title: "Редактировать") { [weak self] _ in
+                UIAction(
+                    title: localizedTitle(for: .edit)
+                ) { [weak self] _ in
                     self?.routeToCategoryViewController(at: indexPath, isEditing: true)
                 },
-                UIAction(title: "Удалить", attributes: [.destructive]) { [weak self] _ in
+                UIAction(
+                    title: localizedTitle(for: .remove),
+                    attributes: [.destructive]
+                ) { [weak self] _ in
                     self?.clarifyCategoryDeletion(at: indexPath)
                 },
             ])
@@ -196,6 +206,7 @@ extension CategoryViewController: UITableViewDataSource {
         
         let categoryName = viewModel.fetchCategoryEntity(at: indexPath).name
         
+        cell.isLastItem = indexPath.row == viewModel.categoriesCount - 1
         cell.accessoryType = viewModel.choosenCategory == categoryName ? .checkmark : .none
         cell.title = categoryName
         
@@ -207,14 +218,14 @@ extension CategoryViewController: UITableViewDataSource {
 private extension CategoryViewController {
     func setUpViews() {
         view.backgroundColor = .ypWhite
-        navigationItem.title = "Категория"
+        navigationItem.title = LocalizationManager.shared.localizedString(for: .category(.navigationTitle))
         
         configureTableView()
         configureAddNewCategoryButton()
         
         addNoContentPlaceholderView()
         addNewCategoryButtonConstraintsActivate()
-        tableViewConstraintsActivate()
+        categoriesTableView.constraintsActivate(using: view, objectsCount: viewModel.categoriesCount)
     }
 }
 
@@ -227,18 +238,10 @@ private extension CategoryViewController {
         )
         categoriesTableView.dataSource = self
         categoriesTableView.delegate = self
-        categoriesTableView.backgroundColor = .clear
-        categoriesTableView.allowsSelection = true
-        categoriesTableView.allowsMultipleSelection = false
-        categoriesTableView.separatorStyle = .singleLine
-        categoriesTableView.separatorInset =
-        UIEdgeInsets(top: 0, left: 16, bottom: 0, right: 16)
-        categoriesTableView.insetsContentViewsToSafeArea = false
-        categoriesTableView.insetsLayoutMarginsFromSafeArea = false
     }
     
     func configureAddNewCategoryButton() {
-        addNewCategoryButton.title = "Добавить категорию"
+        addNewCategoryButton.title = LocalizationManager.shared.localizedString(for: .category(.addCategoryButton))
         addNewCategoryButton.addTarget(
             self,
             action: #selector(didTapAddNewCategoryButton),
@@ -249,33 +252,8 @@ private extension CategoryViewController {
 
 // MARK: - Extensions + Private CategoryViewController Constraints Activation
 private extension CategoryViewController {
-    func tableViewConstraintsActivate() {
-        categoriesTableView.translatesAutoresizingMaskIntoConstraints = false
-        
-        view.addSubview(categoriesTableView)
-        
-        NSLayoutConstraint.activate([
-            categoriesTableView.topAnchor.constraint(
-                equalTo: view.safeAreaLayoutGuide.topAnchor,
-                constant: 24
-            ),
-            categoriesTableView.leadingAnchor.constraint(
-                equalTo: view.leadingAnchor,
-                constant: -8
-            ),
-            categoriesTableView.trailingAnchor.constraint(
-                equalTo: view.trailingAnchor,
-                constant: 8
-            ),
-            categoriesTableView.bottomAnchor.constraint(
-                equalTo: addNewCategoryButton.topAnchor,
-                constant: -24
-            )
-        ])
-    }
-    
     func addNoContentPlaceholderView() {
-        noContentPlaceholderView.title = "Привычки и события можно объединить по смыслу"
+        noContentPlaceholderView.title = LocalizationManager.shared.localizedString(for: .noContentPlaceholder(.noCategoriesFound))
         noContentPlaceholderView.verticalStackView.isHidden = true
         
         view.addSubview(noContentPlaceholderView.verticalStackView)

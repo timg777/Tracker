@@ -59,7 +59,7 @@ extension TrackerCreationViewModel {
         else { return "" }
 
         guard schedule.count < 7 else {
-            return "Каждый день"
+            return LocalizationManager.shared.localizedString(for: .schdule(.allDays))
         }
         let sortedWeekdays = schedule.sorted(by: {$0.rawValue < $1.rawValue})
         var resultString: String = ""

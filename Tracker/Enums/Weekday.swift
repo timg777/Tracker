@@ -33,38 +33,38 @@ enum Weekday: UInt8, CaseIterable {
     var fullName: String {
         switch self {
         case .monday:
-            return "Понедельник"
+            LocalizationManager.shared.localizedString(for: .schdule(.monday))
         case .tuesday:
-            return "Вторник"
+            LocalizationManager.shared.localizedString(for: .schdule(.tuesday))
         case .wednesday:
-            return "Среда"
+            LocalizationManager.shared.localizedString(for: .schdule(.wednesday))
         case .thursday:
-            return "Четверг"
+            LocalizationManager.shared.localizedString(for: .schdule(.thursday))
         case .friday:
-            return "Пятница"
+            LocalizationManager.shared.localizedString(for: .schdule(.friday))
         case .saturday:
-            return "Суббота"
+            LocalizationManager.shared.localizedString(for: .schdule(.saturday))
         case .sunday:
-            return "Воскресенье"
+            LocalizationManager.shared.localizedString(for: .schdule(.sunday))
         }
     }
     
     var briefName: String {
         switch self {
         case .monday:
-            return "Пн"
+            LocalizationManager.shared.localizedString(for: .schdule(.monday_brief))
         case .tuesday:
-            return "Вт"
+            LocalizationManager.shared.localizedString(for: .schdule(.tuesday_brief))
         case .wednesday:
-            return "Ср"
+            LocalizationManager.shared.localizedString(for: .schdule(.wednesday_brief))
         case .thursday:
-            return "Чт"
+            LocalizationManager.shared.localizedString(for: .schdule(.thursday_brief))
         case .friday:
-            return "Пт"
+            LocalizationManager.shared.localizedString(for: .schdule(.friday_brief))
         case .saturday:
-            return "Сб"
+            LocalizationManager.shared.localizedString(for: .schdule(.saturday_brief))
         case .sunday:
-            return "Вс"
+            LocalizationManager.shared.localizedString(for: .schdule(.sunday_brief))
         }
     }
 }

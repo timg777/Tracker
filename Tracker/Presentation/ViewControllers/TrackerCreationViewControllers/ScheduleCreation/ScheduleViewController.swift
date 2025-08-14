@@ -3,7 +3,7 @@ import UIKit
 final class ScheduleViewController: UIViewController {
     
     // MARK: - Private Views
-    private lazy var tableView: UITableView = {
+    private lazy var tableView: TrackerTableView = {
         .init()
     }()
     private lazy var confirmButton: TrackerButton = {
@@ -108,12 +108,12 @@ extension ScheduleViewController: UITableViewDelegate {
 private extension ScheduleViewController {
     func setUpViews() {
         view.backgroundColor = .ypWhite
-        navigationItem.title = "Расписание"
+        navigationItem.title = LocalizationManager.shared.localizedString(for: .scheduleViewController(.navigationTitle))
         
         configureTableView()
         configureConfirmButton()
         
-        tableViewConstraintsActivate()
+        tableView.constraintsActivate(using: view, objectsCount: 7)
         confirmButtonConstraintsActivate()
     }
 }
@@ -127,18 +127,10 @@ private extension ScheduleViewController {
             ScheduleOptionsCell.self,
             forCellReuseIdentifier: ScheduleOptionsCell.reuseIdentifier
         )
-        
-        tableView.backgroundColor = .clear
-        tableView.separatorStyle = .none
-        tableView.tableFooterView = nil
-        tableView.tableHeaderView = nil
-        tableView.layer.cornerRadius = 16
-        tableView.clipsToBounds = true
-        tableView.isScrollEnabled = false
     }
     
     func configureConfirmButton() {
-        confirmButton.title = "Готово"
+        confirmButton.title = LocalizationManager.shared.localizedString(for: .scheduleViewController(.confirmButton))
         confirmButton.addTarget(
             self,
             action: #selector(didTapConfirmButton),
@@ -149,30 +141,6 @@ private extension ScheduleViewController {
 
 // MARK: - Extensions + Private ScheduleViewController Views Constraints Activation
 private extension ScheduleViewController {
-    func tableViewConstraintsActivate() {
-        tableView.translatesAutoresizingMaskIntoConstraints = false
-        
-        view.addSubview(tableView)
-        
-        NSLayoutConstraint.activate([
-            tableView.topAnchor.constraint(
-                equalTo: view.safeAreaLayoutGuide.topAnchor,
-                constant: 24
-            ),
-            tableView.leadingAnchor.constraint(
-                equalTo: view.leadingAnchor,
-                constant: 16
-            ),
-            tableView.trailingAnchor.constraint(
-                equalTo: view.trailingAnchor,
-                constant: -16
-            ),
-            tableView.heightAnchor.constraint(
-                equalToConstant: ViewsHeightConstant.tableViewCellHeight.rawValue * CGFloat(Weekday.allCases.count)
-            )
-        ])
-    }
-    
     func confirmButtonConstraintsActivate() {
         confirmButton.translatesAutoresizingMaskIntoConstraints = false
         

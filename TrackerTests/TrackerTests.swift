@@ -1,4 +1,5 @@
 import XCTest
+import SnapshotTesting
 @testable import Tracker
 
 final class TrackerTests: XCTestCase {
@@ -10,20 +11,76 @@ final class TrackerTests: XCTestCase {
     override func tearDownWithError() throws {
         // Put teardown code here. This method is called after the invocation of each test method in the class.
     }
-
-    func testExample() throws {
-        // This is an example of a functional test case.
-        // Use XCTAssert and related functions to verify your tests produce the correct results.
-        // Any test you write for XCTest can be annotated as throws and async.
-        // Mark your test throws to produce an unexpected failure when your test encounters an uncaught error.
-        // Mark your test async to allow awaiting for asynchronous code to complete. Check the results with assertions afterwards.
+    
+    func testTrackerViewControllerLightAppearance() throws {
+        try testAppearance(theme: .light)
+    }
+    
+    func testTrackerViewControllerDarkAppearance() throws {
+        try testAppearance(theme: .dark)
     }
 
-    func testPerformanceExample() throws {
-        // This is an example of a performance test case.
-        self.measure {
-            // Put the code you want to measure the time of here.
-        }
+    private func testAppearance(theme: UIUserInterfaceStyle) throws {
+        let vc = TrackersViewController()
+        
+        try testViewControllerAppearance(
+            for: .iPhoneSe,
+            theme: .init(userInterfaceStyle: theme),
+            vc: vc
+        )
+        try testViewControllerAppearance(
+            for: .iPhone13Mini,
+            theme: .init(userInterfaceStyle: theme),
+            vc: vc
+        )
+        try testViewControllerAppearance(
+            for: .iPhoneX,
+            theme: .init(userInterfaceStyle: theme),
+            vc: vc
+        )
+        try testViewControllerAppearance(
+            for: .iPhone8Plus,
+            theme: .init(userInterfaceStyle: theme),
+            vc: vc
+        )
+        try testViewControllerAppearance(
+            for: .iPhone13Pro,
+            theme: .init(userInterfaceStyle: theme),
+            vc: vc
+        )
+        try testViewControllerAppearance(
+            for: .iPhone13ProMax,
+            theme: .init(userInterfaceStyle: theme),
+            vc: vc
+        )
+        
+        try testViewControllerAppearance(
+            for: .iPadMini,
+            theme: .init(userInterfaceStyle: theme),
+            vc: vc
+        )
+        try testViewControllerAppearance(
+            for: .iPadPro12_9,
+            theme: .init(userInterfaceStyle: theme),
+            vc: vc
+        )
+        try testViewControllerAppearance(
+            for: .iPadPro10_5,
+            theme: .init(userInterfaceStyle: theme),
+            vc: vc
+        )
+    }
+    
+    private func testViewControllerAppearance(
+        for device: SnapshotTesting.ViewImageConfig,
+        theme: UITraitCollection,
+        vc: UIViewController
+    ) throws {
+        assertSnapshots(
+            of: vc,
+            as: [.image(on: device)],
+            record: false
+        )
     }
 
 }

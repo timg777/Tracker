@@ -39,6 +39,14 @@ final class TrackerCategoryStore: NSObject {
     
     init(context: NSManagedObjectContext) {
         self.context = context
+        super.init()
+        performFetchResults()
+    }
+    
+    private func saveContext() throws {
+        guard context.hasChanges else { return }
+        try context.save()
+        performFetchResults()
     }
 }
 
@@ -48,8 +56,7 @@ extension TrackerCategoryStore {
         let entity = TrackerCategoryEntity(context: context)
         entity.update(with: category.title)
         
-        try context.save()
-        performFetchResults()
+        try saveContext()
     }
 }
 
@@ -59,8 +66,7 @@ extension TrackerCategoryStore {
         let entity = controller.object(at: indexPath)
         entity.update(with: name)
         
-        try context.save()
-        performFetchResults()
+        try saveContext()
     }
 }
 
@@ -122,8 +128,7 @@ private extension TrackerCategoryStore {
     func deleteCategory(entity: TrackerCategoryEntity) throws {
         context.delete(entity)
         
-        try context.save()
-        performFetchResults()
+        try saveContext()
     }
 }
 
