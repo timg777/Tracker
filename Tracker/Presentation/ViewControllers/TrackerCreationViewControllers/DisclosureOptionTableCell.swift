@@ -22,7 +22,7 @@ final class DisclosureOptionTableCell: UITableViewCell {
     // MARK: - Internal Properties
     var screenItem: TrackerCreationOptionScreenItem? {
         didSet {
-            titleLabel.text = screenItem?.name.rawValue
+            titleLabel.text = screenItem?.name.title
         }
     }
     var isLastItem: Bool? {
@@ -43,7 +43,7 @@ final class DisclosureOptionTableCell: UITableViewCell {
                 string: selectedOptions ?? "",
                 attributes: [
                     .font: UIFont.ypRegular17,
-                    .foregroundColor: #colorLiteral(red: 0.6814661026, green: 0.686439395, blue: 0.707844317, alpha: 1),
+                    .foregroundColor: UIColor.ypGray.withAlphaComponent(0.7),
                     .paragraphStyle: paragraphStyle
                 ]
             )
@@ -105,7 +105,7 @@ private extension DisclosureOptionTableCell {
     }
     
     func configureCell() {
-        backgroundColor = .clear
+        backgroundColor = .background
     }
     
     func configureTitleLabel() {

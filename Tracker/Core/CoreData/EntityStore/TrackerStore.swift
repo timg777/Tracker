@@ -46,6 +46,8 @@ final class TrackerStore: NSObject {
     // MARK: - Initialization
     init(context: NSManagedObjectContext) {
         self.context = context
+        super.init()
+        performFetchResults()
     }
 }
 
@@ -56,7 +58,16 @@ extension TrackerStore {
         try context.save()
         performFetchResults()
     }
-    
+    func updateTracker(
+        entity: TrackerEntity,
+        tracker: TrackerModel,
+        category: TrackerCategoryEntity
+    ) throws {
+        entity.update(with: tracker)
+        entity.category = category
+        
+        try saveContext()
+    }
     func addNewTracker(_ tracker: TrackerModel, to categoryName: String) throws {
         guard let categoryEntity = try findCategory(named: categoryName) else {
             createDefaultCategory?()
@@ -83,10 +94,17 @@ extension TrackerStore {
             return
         }
         
-        trackerEntity.update(with: tracker)
-        trackerEntity.category = categoryEntity
-
-        try saveContext()
+        try updateTracker(
+            entity: trackerEntity,
+            tracker: tracker,
+            category: categoryEntity
+        )
+    }
+    func pinTracker(indexPath: IndexPath) throws {
+        #warning("TODO: implement tracker pin")
+    }
+    func unpinTracker(indexPath: IndexPath) throws {
+        #warning("TODO: implement tracker unpin")
     }
     
     func deleteTracker(_ entity: TrackerEntity) throws {
@@ -153,7 +171,42 @@ extension TrackerStore {
 
 // MARK: - Extensions + Internal TrackerStore Predicate Filter Updating
 extension TrackerStore {
-    func updatePredicate(titleFilter: String?, date: Date) throws {
+    func trackerCountWithoutFilter(
+        titleFilter: String?,
+        date: Date
+    ) throws -> Int {
+        let calendar = Calendar.current
+        let date = calendar.startOfDay(for: date)
+
+        let weekday = String(calendar.component(.weekday, from: date))
+        
+        var predicates: [NSPredicate] = [
+            .init(
+                format: "%K CONTAINS[c] %@ OR %K == %@",
+                #keyPath(TrackerEntity.schedule), weekday,
+                #keyPath(TrackerEntity.schedule), ""
+            )
+        ]
+        
+        if let titleFilter, !titleFilter.isEmpty {
+            predicates.append(
+                .init(
+                    format: "%K CONTAINS[c] %@",
+                    #keyPath(TrackerEntity.title), titleFilter
+                )
+            )
+        }
+        
+        let fetchRequest = TrackerEntity.fetchRequest()
+        fetchRequest.predicate = NSCompoundPredicate(andPredicateWithSubpredicates: predicates)
+        return try context.count(for: fetchRequest)
+    }
+    
+    func updatePredicate(
+        titleFilter: String?,
+        onlyCompleted: Bool?,
+        date: Date
+    ) throws {
         let calendar = Calendar.current
         let date = calendar.startOfDay(for: date)
 
@@ -177,8 +230,23 @@ extension TrackerStore {
                 )
             )
         }
-        controller.fetchRequest.predicate = NSCompoundPredicate(andPredicateWithSubpredicates: predicates)
         
+        if let onlyCompleted {
+            let format: String
+            if onlyCompleted {
+                format = "SUBQUERY(%K, $record, $record.date == %@).@count > 0"
+            } else {
+                format = "SUBQUERY(%K, $record, $record.date == %@).@count == 0"
+            }
+            predicates.append(
+                .init(
+                    format: format,
+                    #keyPath(TrackerEntity.records), date as NSDate
+                )
+            )
+        }
+        
+        controller.fetchRequest.predicate = NSCompoundPredicate(andPredicateWithSubpredicates: predicates)
         try controller.performFetch()
         
         let update = TrackerStoreUpdate(

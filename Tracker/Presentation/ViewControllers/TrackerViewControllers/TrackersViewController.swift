@@ -21,15 +21,51 @@ final class TrackersViewController: UIViewController {
     private lazy var noContentPlaceholderView: NoContentPlaceHolderView = {
         .init()
     }()
+    private lazy var filtersButton: UIButton = {
+        var config = UIButton.Configuration.filled()
+        config.contentInsets = .init(top: 14, leading: 20, bottom: 14, trailing: 20)
+        config.baseBackgroundColor = .ypBlue
+        config.cornerStyle = .fixed
+        config.background.cornerRadius = 16
+        
+        let button = UIButton(configuration: config)
+        button.setAttributedTitle(
+            NSAttributedString(
+                string: localizedString(uiElement: .filtersButton),
+                attributes:
+                    [
+                        .font: UIFont.ypRegular17,
+                        .foregroundColor: UIColor.white
+                    ]
+            ),
+            for: .normal
+        )
+        button.addTarget(self, action: #selector(filterButtonTapped), for: .touchUpInside)
+        
+        return button
+    }()
     
     // MARK: - Private Constants
-    private var trackerViewModel = TrackerManager.shared.trackerViewModel
-    private var trackerRecordViewModel = TrackerManager.shared.trackerRecordViewModel
-    private var categoryViewModel = TrackerManager.shared.categoryViewModel
+    private let reportManager = YMMYYandexMetricaReportManager.shared
+    private let trackerViewModel = TrackerManager.shared.trackerViewModel
+    private let trackerRecordViewModel = TrackerManager.shared.trackerRecordViewModel
+    private let categoryViewModel = TrackerManager.shared.categoryViewModel
+    
+    // MARK: - Private Properties
+    private var filterOption: FilterOption = .allTrackers {
+        didSet {
+            filterOptionsChangedHandler()
+        }
+    }
+    private var filterButtonBottomConstraint: NSLayoutConstraint?
     
     // MARK: - Private Properties
     private var currentDate: Date = .now {
         didSet {
+            guard filterOption != .trackersForToday else {
+                filterOption = .allTrackers
+                return
+            }
             filterOptionsChangedHandler()
         }
     }
@@ -40,10 +76,10 @@ final class TrackersViewController: UIViewController {
         
         addObservers()
         setUpViews()
-        currentDate = .now
         
         handleViewModelsEvents()
     }
+
     
     deinit {
         NotificationCenter.default.removeObserver(self)
@@ -57,8 +93,12 @@ private extension TrackersViewController {
             self?.categoriesDidChanged()
         }
         trackerViewModel.onError = { [weak self] error in
-            guard let _ = self else { return }
+            guard let self else { return }
             print("An error occurred: \(error)")
+            reportManager.sendReport(
+                reportTitle: "TrackerViewModel Error Report",
+                errorString: error
+            )
         }
         
         trackerRecordViewModel.trackerEntity = { [weak self] uuid in
@@ -66,16 +106,24 @@ private extension TrackersViewController {
             return trackerViewModel.trackerEntity(by: uuid)
         }
         trackerRecordViewModel.onError = { [weak self] error in
-            guard let _ = self else { return }
+            guard let self else { return }
             print("An error occurred: \(error)")
+            reportManager.sendReport(
+                reportTitle: "TrackerRecordViewModel Error Report",
+                errorString: error
+            )
         }
         
         categoryViewModel.onCategoriesChanged = { [weak self] in
             self?.categoriesDidChanged()
         }
         categoryViewModel.onError = { [weak self] error in
-            guard let _ = self else { return }
+            guard let self else { return }
             print("An error occurred: \(error)")
+            reportManager.sendReport(
+                reportTitle: "TrackerCategoryViewModel Error Report",
+                errorString: error
+            )
         }
     }
 }
@@ -103,6 +151,13 @@ private extension TrackersViewController {
         )
     }
     
+    func localizedString(uiElement: LocalizationManager.UIElement.TrackersViewController) -> String {
+        LocalizationManager.shared.localizedString(using: uiElement.rawValue)
+    }
+    func localizedString(shared: LocalizationManager.UIElement.Shared) -> String {
+        LocalizationManager.shared.localizedString(using: shared.rawValue)
+    }
+    
     @objc private func categoriesDidChanged() {
         habitsCollectionView.reloadData()
         reloadNoContentPlaceholderView(with: .noSearchResults)
@@ -118,9 +173,18 @@ private extension TrackersViewController {
         let dataIsEmpty = habitsCollectionView.numberOfSections == 0
         noContentPlaceholderView.type = type
         noContentPlaceholderView.verticalStackView.isHidden = !dataIsEmpty
+        
+        let titleFilter = navigationItem.searchController?.searchBar.text ?? ""
+        filtersButton.isHidden = trackerViewModel.trackerCountWithoutFilter(titleFilter: titleFilter, date: currentDate) == 0
     }
     
     func deleteTracker(at indexPath: IndexPath) {
+        reportManager.sendActionReport(
+            reportTitle: "User confirmed deletion of a tracker",
+            event: .click,
+            screenName: "Main",
+            item: .delete
+        )
         trackerViewModel.deleteTracker(at: indexPath)
         habitsCollectionView.reloadData()
         reloadNoContentPlaceholderView(with: .noSearchResults)
@@ -128,23 +192,29 @@ private extension TrackersViewController {
     
     func clarifyTrackerDeletion(at indexPath: IndexPath) {
         let alert = UIAlertController(
-            title: "Уверены, что хотите удалить трекер?",
+            title: localizedString(uiElement: .alertTitle),
             message: nil,
             preferredStyle: .actionSheet
         )
         alert.addAction(
             .init(
-                title: "Отменить",
+                title: localizedString(shared: .cancel),
                 style: .cancel,
                 handler: { [weak self] _ in
-                    guard let _ = self else { return }
+                    guard let self else { return }
+                    reportManager.sendActionReport(
+                        reportTitle: "User cancelled deletion of a tracker",
+                        event: .close,
+                        screenName: "Main",
+                        item: nil
+                    )
                     alert.dismiss(animated: true)
                 }
             )
         )
         alert.addAction(
             .init(
-                title: "Удалить",
+                title: localizedString(shared: .remove),
                 style: .destructive,
                 handler: { [weak self] _ in
                     self?.deleteTracker(at: indexPath)
@@ -156,8 +226,8 @@ private extension TrackersViewController {
     }
 }
 
-// MARK: - Extensions + Internal TrackersViewController -> TrackerViewControllerProtocol Conformance
-extension TrackersViewController {
+// MARK: - Extensions + Private TrackersViewController Routing
+private extension TrackersViewController {
     func showTrackerCreationViewController() {
         let trackerCreationViewController = TrackerCreationViewController()
         trackerCreationViewController.modalPresentationStyle = .pageSheet
@@ -168,12 +238,43 @@ extension TrackersViewController {
             animated: true
         )
     }
+    
+    func showTrackersFilterViewController() {
+        let filtersViewController = FiltersViewController(
+            filter: filterOption) { [weak self] newOption in
+                guard let self else { return }
+                filterOption = newOption
+            }
+        filtersViewController.modalPresentationStyle = .pageSheet
+        filtersViewController.isModalInPresentation = false
+        
+        let navigationController = UINavigationController(rootViewController: filtersViewController)
+        present(
+            navigationController,
+            animated: true
+        )
+    }
 }
 
 // MARK: - Extensions + Private TrackersViewController Buttons Handlers
 private extension TrackersViewController {
+    @objc func filterButtonTapped() {
+        showTrackersFilterViewController()
+        reportManager.sendActionReport(
+            reportTitle: "User tapped filter button",
+            event: .click,
+            screenName: "Main",
+            item: .filter
+        )
+    }
     @objc func handlePlusButtonTapped() {
         showTrackerCreationViewController()
+        reportManager.sendActionReport(
+            reportTitle: "User tapped plus button",
+            event: .click,
+            screenName: "Main",
+            item: .add_track
+        )
     }
     
     @objc func keyboardWillShow(notification: Notification) {
@@ -202,10 +303,14 @@ private extension TrackersViewController {
     
     private func setCollectionViewContentInset(_ inset: UIEdgeInsets) {
         view.isUserInteractionEnabled = false
+        filterButtonBottomConstraint?.constant = -inset.bottom - 16
         UIView.animate(
             withDuration: 0.25,
             animations: { [weak self] in
-                self?.habitsCollectionView.contentInset = inset
+                guard let self else { return }
+                habitsCollectionView.contentInset = inset
+                habitsCollectionView.contentInset.bottom += 70
+                view.layoutIfNeeded()
             },
             completion: { [weak self] _ in
                 self?.view.isUserInteractionEnabled = true
@@ -333,16 +438,17 @@ extension TrackersViewController: UICollectionViewDataSource {
 // MARK: - Extensions + TrackersViewController -> TrackerCollectionCellDelegate Conformnace
 extension TrackersViewController: TrackerCollectionCellDelegate {
     func isTrackerPinned(uuid: UUID) -> Bool {
-        false
-        // TODO: - implement tracker isPinned Getter
+        trackerViewModel.isTrackerPinned(uuid: uuid)
     }
     
     func pinTracker(at indexPath: IndexPath?) {
-        // TODO: - implement tracker pin
+        guard let indexPath else { return }
+        trackerViewModel.pinTracker(indexPath: indexPath)
     }
     
     func unpinTracker(at indexPath: IndexPath?) {
-        // TODO: - implement tracker unpin
+        guard let indexPath else { return }
+        trackerViewModel.unpinTracker(indexPath: indexPath)
     }
     
     func editTracker(at indexPath: IndexPath?) {
@@ -423,7 +529,7 @@ extension TrackersViewController: TrackerCollectionCellDelegate {
 // MARK: - Extensions + Private TrackersViewController Setting Up Views
 private extension TrackersViewController {
     func setUpViews() {
-        view.backgroundColor = .background
+        view.backgroundColor = .mainViewBackground
         
         configurePlusButton()
         configureDatePicker()
@@ -431,6 +537,7 @@ private extension TrackersViewController {
         configureNavigationBar()
         
         habitsCollectionViewConstraintsActivate()
+        filtersButtonConstraintsActivate()
         noContentPlaceholderViewConstraintsActivate()
         
         reloadNoContentPlaceholderView(with: .noSearchResults)
@@ -447,20 +554,54 @@ extension TrackersViewController: DebouncedSearchControllerDelegate {
     
     func filterOptionsChangedHandler() {
         let trackerTitleFilter = navigationItem.searchController?.searchBar.text
+        
+        var onlyCompleted: Bool?
+        switch filterOption {
+        case .trackersForToday:
+            datePicker.setDate(.now, animated: true)
+            configureFilterButton(filterIsActive: false)
+        case .completedTrackers:
+            onlyCompleted = true
+            configureFilterButton(filterIsActive: true)
+        case .uncompletedTrackers:
+            onlyCompleted = false
+            configureFilterButton(filterIsActive: true)
+        default:
+            configureFilterButton(filterIsActive: false)
+            break
+        }
+        
         trackerViewModel.updateFilterPredicate(
             trackerTitleFilter: trackerTitleFilter,
+            onlyCompleted: onlyCompleted,
             dateFilter: currentDate
         )
+        
         reloadNoContentPlaceholderView(with: .noSearchResults)
     }
 }
 
 // MARK: - Extensions + Private TrackersViewController Views Configuring
 private extension TrackersViewController {
+    func configureFilterButton(filterIsActive: Bool) {
+        filtersButton.setAttributedTitle(
+            NSAttributedString(
+                string: localizedString(uiElement: .filtersButton),
+                attributes:
+                    [
+                        .font: UIFont.ypRegular17,
+                        .foregroundColor: filterIsActive ? UIColor.colorSelection1 : UIColor.white
+                    ]
+            ),
+            for: .normal
+        )
+        filtersButton.configuration?.background.backgroundColor = filterIsActive ? #colorLiteral(red: 0.8627451062, green: 0.470588237, blue: 0.870588243, alpha: 0.4980392158) : .ypBlue
+    }
+    
     func configureNavigationBar() {
         navigationItem.hidesSearchBarWhenScrolling = false
         navigationController?.navigationBar.prefersLargeTitles = true
-        title = "Трекеры"
+        title = localizedString(uiElement: .navigationTitle)
         
         navigationItem.leftBarButtonItem =
         UIBarButtonItem(
@@ -513,6 +654,7 @@ private extension TrackersViewController {
         habitsCollectionView.contentInsetAdjustmentBehavior = .always
         habitsCollectionView.keyboardDismissMode = .interactive
         habitsCollectionView.alwaysBounceVertical = true
+        habitsCollectionView.contentInset = .init(top: 0, left: 0, bottom: 70, right: 0)
         
         habitsCollectionView.delegate = self
         habitsCollectionView.dataSource = self
@@ -531,6 +673,24 @@ private extension TrackersViewController {
 
 // MARK: - Extensions + Private TrackersViewController Views Constraints Activation
 private extension TrackersViewController {
+    func filtersButtonConstraintsActivate() {
+        filtersButton.translatesAutoresizingMaskIntoConstraints = false
+        
+        view.addSubview(filtersButton)
+        
+        filterButtonBottomConstraint = filtersButton.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -16)
+        
+        NSLayoutConstraint.activate([
+            filtersButton.centerXAnchor.constraint(
+                equalTo: view.centerXAnchor
+            ),
+            filterButtonBottomConstraint ?? filtersButton.bottomAnchor.constraint(
+                equalTo: view.safeAreaLayoutGuide.bottomAnchor,
+                constant: -16
+            )
+        ])
+    }
+    
     func noContentPlaceholderViewConstraintsActivate() {
         let placeholderView = noContentPlaceholderView.verticalStackView
         placeholderView.isHidden = true

@@ -1,6 +1,6 @@
 import UIKit
 
-final class CategoryOptionsCell: TrackerTableViewCell {
+final class FilterOptionCell: TrackerTableViewCell {
     
     // MARK: - Private Views
     private lazy var titleView: UILabel = {
@@ -8,11 +8,13 @@ final class CategoryOptionsCell: TrackerTableViewCell {
     }()
     
     // MARK: - Internal Static Constraints
-    static let reuseIdentifier: String = "NewHabitCreationCategoryOptionsCell"
+    static let reuseIdentifier: String = "FilterOptionCell"
     
     // MARK: - Internal Properties
-    var title: String? {
+    var option: FilterOption? {
         didSet {
+            guard let option else { return }
+            
             let paragraphStyle: NSMutableParagraphStyle = {
                 let paragraphStyle: NSMutableParagraphStyle = .init()
                 paragraphStyle.lineBreakMode = .byWordWrapping
@@ -24,7 +26,7 @@ final class CategoryOptionsCell: TrackerTableViewCell {
             
             titleView.attributedText =
             NSAttributedString(
-                string: title ?? "",
+                string: option.title,
                 attributes: [
                     .font: UIFont.ypRegular17,
                     .foregroundColor: UIColor.ypBlack,
@@ -45,8 +47,8 @@ final class CategoryOptionsCell: TrackerTableViewCell {
             style: style,
             reuseIdentifier: reuseIdentifier
         )
-        
-        setUpViews()
+     
+        setupView()
     }
     
     required init?(coder: NSCoder) {
@@ -54,18 +56,10 @@ final class CategoryOptionsCell: TrackerTableViewCell {
     }
 }
 
-// MARK: - Extensions + Private CategoryOptionsCell Setting Up Views
-private extension CategoryOptionsCell {
-    func setUpViews() {
+private extension FilterOptionCell {
+    func setupView() {
         backgroundColor = .background
         
-        titleViewConstraintsActivate()
-    }
-}
-
-// MARK: - Extensions + CategoryOptionsCell Constraints Activation
-private extension CategoryOptionsCell {
-    func titleViewConstraintsActivate() {
         titleView.translatesAutoresizingMaskIntoConstraints = false
         
         contentView.addSubview(titleView)

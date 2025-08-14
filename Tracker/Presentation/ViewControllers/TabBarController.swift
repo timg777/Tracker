@@ -23,7 +23,7 @@ private extension TabBarController {
         let trackerViewController = TrackersViewController()
         trackerViewController.tabBarItem =
         UITabBarItem(
-            title: "Трекеры",
+            title: LocalizationManager.shared.localizedString(for: .tabBar(.trackers)),
             image: UIImage(resource: .tabBarTrackersTab),
             tag: 0
         )
@@ -31,7 +31,7 @@ private extension TabBarController {
         let statisticViewController = StatisticViewController()
         statisticViewController.tabBarItem =
         UITabBarItem(
-            title: "Статистика",
+            title: LocalizationManager.shared.localizedString(for: .tabBar(.stats)),
             image: UIImage(resource: .tabBarStatisticTab),
             tag: 1
         )

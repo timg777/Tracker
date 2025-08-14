@@ -47,6 +47,21 @@ extension TrackerViewModel {
     func tracker(at indexPath: IndexPath) -> TrackerModel? {
         model.tracker(at: indexPath)
     }
+    @inline(__always)
+    func trackerCountWithoutFilter(
+        titleFilter: String?,
+        date: Date
+    ) -> Int {
+        do {
+            return try model.trackerCountWithoutFilter(
+                titleFilter: titleFilter,
+                date: date
+            )
+        } catch {
+            onError?("Failed to get tracker count: \(error)")
+            return 0
+        }
+    }
     func trackerEntity(by uuid: UUID) -> TrackerEntity? {
         do {
             return try model.trackerEntity(by: uuid)
@@ -59,6 +74,11 @@ extension TrackerViewModel {
     func sectionName(at index: Int) -> String? {
         model.sectionName(at: index)
     }
+    func isTrackerPinned(uuid: UUID) -> Bool {
+        #warning("TODO: implement this method")
+        return false
+    }
+    
     
     // MARK: - Tracker Creation
     func addNewTracker(_ tracker: TrackerModel, to categoryName: String) {
@@ -87,11 +107,35 @@ extension TrackerViewModel {
         }
     }
     
+    func pinTracker(indexPath: IndexPath) {
+        do {
+            try model.pinTracker(indexPath: indexPath)
+        } catch {
+            onError?("Failed to pin tracker: \(error)")
+        }
+    }
+    
+    func unpinTracker(indexPath: IndexPath) {
+        do {
+            try model.unpinTracker(indexPath: indexPath)
+        } catch {
+            onError?("Failed to unpin tracker: \(error)")
+        }
+    }
+    
     // MARK: - Trackers Filter Update
     @inline(__always)
-    func updateFilterPredicate(trackerTitleFilter: String?, dateFilter: Date) {
+    func updateFilterPredicate(
+        trackerTitleFilter: String?,
+        onlyCompleted: Bool?,
+        dateFilter: Date
+    ) {
         do {
-            try model.updatePredicate(titleFilter: trackerTitleFilter, date: dateFilter)
+            try model.updatePredicate(
+                titleFilter: trackerTitleFilter,
+                onlyCompleted: onlyCompleted,
+                date: dateFilter
+            )
         } catch {
             onError?("Failed to update filter predicate: \(error)")
         }

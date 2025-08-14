@@ -12,7 +12,7 @@ final class TrackerCreationOptionsViewController: UIViewController {
     private lazy var availableTextRangeReachedLabel: UILabel = {
         .init()
     }()
-    private lazy var tableView: UITableView = {
+    private lazy var tableView: TrackerTableView = {
         .init()
     }()
     private lazy var optionsCollectionView: UICollectionView = {
@@ -137,10 +137,8 @@ private extension TrackerCreationOptionsViewController {
         guard
             let emoji = trackerCreationViewModel.emoji,
             let color = trackerCreationViewModel.color,
-            let title = trackerCreationViewModel.title
+            let _ = trackerCreationViewModel.title
         else { return }
-        
-//        textField.text = title
         
         guard
             let emojiIndex =
@@ -183,6 +181,13 @@ private extension TrackerCreationOptionsViewController {
             confirmButton.layer.opacity = isButtonEnabled ? 1 : 0.4
             confirmButton.isEnabled = isButtonEnabled
         }
+    }
+    
+    func localizedTitle(uiElement: LocalizationManager.UIElement.TrackerOption) -> String {
+        LocalizationManager.shared.localizedString(using: uiElement.rawValue)
+    }
+    func localizedTitle(shared: LocalizationManager.UIElement.Shared) -> String {
+        LocalizationManager.shared.localizedString(using: shared.rawValue)
     }
     
     func isTrackerNameValid(_ name: String) -> Bool {
@@ -499,7 +504,7 @@ extension TrackerCreationOptionsViewController: UICollectionViewDataSource {
             return UICollectionReusableView()
         }
         
-        header.title = indexPath.section == 0 ? "Emoji" : "Цвет"
+        header.title = localizedTitle(uiElement: indexPath.section == 0 ? .emojiSection : .colorSection)
         
         return header
     }
@@ -580,7 +585,7 @@ private extension TrackerCreationOptionsViewController {
     func configureAvailableTextRangeReachedLabel() {
         availableTextRangeReachedLabel.attributedText =
         NSAttributedString(
-            string: "Ограничение 38 символов",
+            string: localizedTitle(shared: .symbolsCountRestriction),
             attributes: [
                 .font: UIFont.ypRegular17,
                 .foregroundColor: UIColor.ypRed
@@ -590,7 +595,7 @@ private extension TrackerCreationOptionsViewController {
         availableTextRangeReachedLabel.layer.zPosition = 0.9
     }
     func configureTableView() {
-        tableView.allowsMultipleSelection = false
+//        tableView.allowsMultipleSelection = false
         tableView.delegate = self
         tableView.dataSource = self
         tableView.register(
@@ -598,12 +603,12 @@ private extension TrackerCreationOptionsViewController {
             forCellReuseIdentifier: DisclosureOptionTableCell.reuseIdentifier
         )
         
-        tableView.backgroundColor = .background
-        tableView.separatorStyle = .none
-        tableView.tableFooterView = nil
-        tableView.tableHeaderView = nil
-        tableView.layer.cornerRadius = 16
-        tableView.clipsToBounds = true
+//        tableView.backgroundColor = .background
+//        tableView.separatorStyle = .none
+//        tableView.tableFooterView = nil
+//        tableView.tableHeaderView = nil
+//        tableView.layer.cornerRadius = 16
+//        tableView.clipsToBounds = true
     }
     
     func configureOptionsCollectionView() {
@@ -629,11 +634,11 @@ private extension TrackerCreationOptionsViewController {
     func configureTitleLabel() {
         let text: String
         if isForEdit {
-            text = "Редактирование привычки"
+            text = localizedTitle(uiElement: .editNavigationTitle)
         } else if isIrregularEvent ?? false {
-            text = "Новое нерегулярное событие"
+            text = localizedTitle(uiElement: .irregularNavigationTitle)
         } else {
-            text = "Новая привычка"
+            text = localizedTitle(uiElement: .habitNavigationTitle)
         }
         
         titleLabel.attributedText =
@@ -647,16 +652,16 @@ private extension TrackerCreationOptionsViewController {
     }
     
     func configureSearchField() {
-        textField.placeholderText = "Введите название привычки"
+        textField.placeholderText = localizedTitle(uiElement: .textFieldPlaceholder)
         textField.delegate = self
     }
     
     func configureConfirmButton() {
         let buttonName: String
         if isForEdit {
-            buttonName = "Сохранить"
+            buttonName = localizedTitle(shared: .save)
         } else {
-            buttonName = "Создать"
+            buttonName = localizedTitle(shared: .create)
         }
         confirmButton.title = buttonName
         confirmButton.isEnabled = false
@@ -677,7 +682,7 @@ private extension TrackerCreationOptionsViewController {
     }
     
     func configureCancelButton() {
-        cancelButton.title = "Отменить"
+        cancelButton.title = localizedTitle(shared: .cancel)
         cancelButton.titleColor = .ypRed
         cancelButton.backgroundColor = .clear
         cancelButton.layer.borderColor = UIColor.ypRed.cgColor

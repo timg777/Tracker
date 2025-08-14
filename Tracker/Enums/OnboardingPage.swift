@@ -6,9 +6,9 @@ enum OnboardingPage: UInt8 {
     var title: String {
         switch self {
         case .aboutTracker:
-            "Отслеживайте только то, что хотите"
+            LocalizationManager.shared.localizedString(for: .onboarding(.aboutTrackerTitleText))
         case .aboutWaterAndYoga:
-            "Даже если это не литры воды и йога"
+            LocalizationManager.shared.localizedString(for: .onboarding(.aboutWaterAndYYogaTitleText))
         }
     }
     

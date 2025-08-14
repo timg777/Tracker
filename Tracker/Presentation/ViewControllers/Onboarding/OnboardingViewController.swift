@@ -67,7 +67,7 @@ private extension OnboardingViewController {
     }
     
     func configureSkipButton() {
-        skipButton.title = "Вот это технологии!"
+        skipButton.title = LocalizationManager.shared.localizedString(for: .onboarding(.skipButton))
         skipButton.titleColor = .ypWhite
         skipButton.addTarget(
             self,

@@ -56,7 +56,7 @@ final class TrackerCreationCollectionOptionCell: UICollectionViewCell {
                 case .color(let int):
                     if let color = Self.colors[safe: int] {
                         layer.cornerRadius = 12
-                        layer.borderColor = isSelected ? color.withAlphaComponent(0.3).cgColor : UIColor.clear.cgColor
+                        layer.borderColor = isSelected ? color.withAlphaComponent(0.5).cgColor : UIColor.clear.cgColor
                         layer.borderWidth = isSelected ? 3 : 0
                     }
                 }

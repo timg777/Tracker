@@ -1,15 +1,12 @@
 import UIKit
 
-final class ScheduleOptionsCell: UITableViewCell {
+final class ScheduleOptionsCell: TrackerTableViewCell {
     
     // MARK: - Private Views
     private lazy var titleLabel: UILabel = {
         .init()
     }()
     private lazy var switchView: UISwitch = {
-        .init()
-    }()
-    private lazy var separator: UIView = {
         .init()
     }()
     
@@ -26,11 +23,6 @@ final class ScheduleOptionsCell: UITableViewCell {
     var isOn: Bool?
     var didSelectWeekday: ((Weekday?) -> Void)?
     var didDeselectWeekday: ((Weekday?) -> Void)?
-    var isLastItem: Bool? {
-        didSet {
-            separator.isHidden = isLastItem ?? true
-        }
-    }
     
     // MARK: - View Life Cycles
     override func didMoveToWindow() {
@@ -59,11 +51,9 @@ private extension ScheduleOptionsCell {
         
         configureTitleLabel()
         configureSwitchView()
-        configureSeparator()
         
         titleLabelConstraintsActivate()
         switchViewConstraintsActivate()
-        separatorConstraintsActivate()
     }
 }
 
@@ -78,10 +68,6 @@ private extension ScheduleOptionsCell {
                 .foregroundColor: UIColor.ypBlack
             ]
         )
-    }
-    
-    func configureSeparator() {
-        separator.backgroundColor = .ypGray.withAlphaComponent(0.5)
     }
     
     func configureSwitchView() {
@@ -103,29 +89,6 @@ private extension ScheduleOptionsCell {
             titleLabel.leadingAnchor.constraint(
                 equalTo: leadingAnchor,
                 constant: 16
-            )
-        ])
-    }
-    
-    func separatorConstraintsActivate() {
-        separator.translatesAutoresizingMaskIntoConstraints = false
-        
-        contentView.addSubview(separator)
-        
-        NSLayoutConstraint.activate([
-            separator.leadingAnchor.constraint(
-                equalTo: contentView.leadingAnchor,
-                constant: 16
-            ),
-            separator.trailingAnchor.constraint(
-                equalTo: contentView.trailingAnchor,
-                constant: -16
-            ),
-            separator.heightAnchor.constraint(
-                equalToConstant: 1
-            ),
-            separator.bottomAnchor.constraint(
-                equalTo: contentView.bottomAnchor
             )
         ])
     }

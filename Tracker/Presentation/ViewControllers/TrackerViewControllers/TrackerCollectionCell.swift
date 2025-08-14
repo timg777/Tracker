@@ -57,6 +57,9 @@ final class TrackerCollectionCell: UICollectionViewCell {
         return delegate?.isTrackerPinned(uuid: tracker.id)
     }
     
+    // MARK: - Private Constants
+    private let reportManager = YMMYYandexMetricaReportManager.shared
+    
     // MARK: - Internal Properties
     var indexPath: IndexPath?
     var tracker: TrackerModel?
@@ -72,33 +75,73 @@ final class TrackerCollectionCell: UICollectionViewCell {
     required init?(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
+    
+    private func localizedTitle(for uiElement: LocalizationManager.UIElement.TrackerCollectionCell) -> String {
+        LocalizationManager.shared.localizedString(using: uiElement.rawValue)
+    }
+    private func localizedTitle(for shared: LocalizationManager.UIElement.Shared) -> String {
+        LocalizationManager.shared.localizedString(using: shared.rawValue)
+    }
 }
 
+// MARK: - Extensions + Inernal TrackerCollectionCell -> UIContextMenuInteractionDelegate Conformance
 extension TrackerCollectionCell: UIContextMenuInteractionDelegate {
     func contextMenuInteraction(
         _ interaction: UIContextMenuInteraction,
         configurationForMenuAtLocation location: CGPoint
     ) -> UIContextMenuConfiguration? {
         
+        reportManager.sendActionReport(
+            reportTitle: "User initiated context menu",
+            event: .click,
+            screenName: "Main",
+            item: .context
+        )
+        
         guard let isPinned else { return nil }
+        
+        let pinTitle = localizedTitle(for: isPinned ? .unpin : .pin)
+        let editTitle = localizedTitle(for: .edit)
+        let deleteTitle = localizedTitle(for: .remove)
         
         let configuration = UIContextMenuConfiguration(identifier: nil, previewProvider: nil) { _ in
             UIMenu(children: [
-                UIAction(title: isPinned ? "Открепить" : "Закрепить") { [weak self] _ in
+                UIAction(title: pinTitle) { [weak self] _ in
                     guard let self else { return }
                     if isPinned {
                         delegate?.unpinTracker(at: indexPath)
                     } else {
                         delegate?.pinTracker(at: indexPath)
                     }
+                    
+                    reportManager.sendActionReport(
+                        reportTitle: "User \(isPinned ? "unpinned" : "pinned") tracker",
+                        event: .click,
+                        screenName: "Main",
+                        item: .context
+                    )
                 },
-                UIAction(title: "Редактировать") { [weak self] _ in
+                UIAction(title: editTitle) { [weak self] _ in
                     guard let self else { return }
                     delegate?.editTracker(at: indexPath)
+                    
+                    reportManager.sendActionReport(
+                        reportTitle: "User initiated editing tracker",
+                        event: .click,
+                        screenName: "Main",
+                        item: .edit
+                    )
                 },
-                UIAction(title: "Удалить", attributes: [.destructive]) { [weak self] _ in
+                UIAction(title: deleteTitle, attributes: [.destructive]) { [weak self] _ in
                     guard let self else { return }
                     delegate?.tryDeleteTracker(at: indexPath)
+                    
+                    reportManager.sendActionReport(
+                        reportTitle: "User initiated deleting tracker",
+                        event: .click,
+                        screenName: "Main",
+                        item: .delete
+                    )
                 },
             ])
         }
@@ -132,26 +175,6 @@ private extension TrackerCollectionCell {
         let interaction = UIContextMenuInteraction(delegate: self)
         addInteraction(interaction)
     }
-    
-    func getDayDeclension() -> String {
-        let daysCount = daysCheckedCount ?? 0
-        let absCount = abs(daysCount) % 100
-        let lastDigit = absCount % 10
-        
-        switch daysCount {
-        case 11, 12, 13, 14:
-            return "дней"
-        default:
-            switch lastDigit {
-            case 1:
-                return "день"
-            case 2, 3, 4:
-                return "дня"
-            default:
-                return "дней"
-            }
-        }
-    }
 }
 
 // MARK: - Extensions + Private TrackerCollectionCell Buttons Handlers
@@ -164,8 +187,18 @@ private extension TrackerCollectionCell {
             delegate.dateIsLessThanTodayDate()
         else { return }
         
-        delegate.toggleTrackerRecord(for: tracker.id, updateWith: indexPath)
+        delegate.toggleTrackerRecord(
+            for: tracker.id,
+            updateWith: indexPath
+        )
         updateData()
+        
+        reportManager.sendActionReport(
+            reportTitle: "User \((isDayChecked ?? false) ? "unchecked" : "checked")",
+            event: .click,
+            screenName: "Main",
+            item: .tracker
+        )
     }
     
     func updateData() {
@@ -208,7 +241,7 @@ private extension TrackerCollectionCell {
     
     func configureEmojiView() {
         emojiView.layer.cornerRadius = 12
-        emojiView.backgroundColor = .ypWhite.withAlphaComponent(0.4)
+        emojiView.backgroundColor = .white.withAlphaComponent(0.2)
         emojiView.layer.shadowRadius = 10
         emojiView.layer.shadowOpacity = 0.3
     }
@@ -223,7 +256,7 @@ private extension TrackerCollectionCell {
         }()
         let attributes: [NSAttributedString.Key: Any] = [
             .font: UIFont.ypMedium13,
-            .foregroundColor: UIColor.ypWhite,
+            .foregroundColor: UIColor.white,
             .paragraphStyle: paragraphStyle
         ]
         
@@ -234,10 +267,18 @@ private extension TrackerCollectionCell {
         )
         
         titleLabel.numberOfLines = 2
+        titleLabel.layer.shadowColor = UIColor.black.cgColor
+        titleLabel.layer.shadowOpacity = 0.3
+        titleLabel.layer.shadowRadius = 2
+        titleLabel.layer.shadowOffset = CGSize(width: 0, height: 0)
     }
     
     func configureDaysLabel() {
-        let title = "\(String(daysCheckedCount ?? 0)) \(getDayDeclension())"
+        
+        let title = String.localizedStringWithFormat(
+            localizedTitle(for: .daysCheckedCount),
+            daysCheckedCount ?? 0
+        )
         
         daysLabel.attributedText =
         NSAttributedString(
@@ -260,7 +301,7 @@ private extension TrackerCollectionCell {
             for: .touchUpInside
         )
         plusButton.imageView?.contentMode = .scaleAspectFit
-        plusButton.imageView?.tintColor = .ypWhite
+        plusButton.imageView?.tintColor = .mainViewBackground
         plusButton.layer.cornerRadius = 17
         plusButton.backgroundColor = tracker?.color
         

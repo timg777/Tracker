@@ -55,7 +55,7 @@ private extension TrackerDatePicker {
             string: dateString,
             attributes: [
                 .font: UIFont.systemFont(ofSize: 17, weight: .regular),
-                .foregroundColor: UIColor.ypBlack
+                .foregroundColor: UIColor.black
             ]
         )
     }
@@ -77,7 +77,7 @@ private extension TrackerDatePicker {
         backgroundColor = .clear
         datePickerMode = .date
         preferredDatePickerStyle = .compact
-        locale = Locale(identifier: "ru_RU")
+        locale = Locale.current
         addTarget(
             self,
             action: #selector(datePickerValueDidChanged),
@@ -88,7 +88,7 @@ private extension TrackerDatePicker {
     func configureDateLabel() {
         dateLabel.textAlignment = .center
         dateLabel.isUserInteractionEnabled = false
-        dateLabel.layer.backgroundColor = #colorLiteral(red: 0.9098036885, green: 0.9098040462, blue: 0.9184128046, alpha: 1)
+        dateLabel.layer.backgroundColor = UIColor.ypLightGray.cgColor
         dateLabel.layer.cornerRadius = 8
         
         let (_, dateString) = formatDate()
@@ -97,7 +97,7 @@ private extension TrackerDatePicker {
             string: dateString,
             attributes: [
                 .font: UIFont.systemFont(ofSize: 17, weight: .regular),
-                .foregroundColor: UIColor.ypBlack
+                .foregroundColor: UIColor.black
             ]
         )
     }
